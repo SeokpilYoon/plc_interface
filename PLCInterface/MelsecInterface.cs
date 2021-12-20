@@ -252,8 +252,7 @@ namespace PLCInterface
                         item.ReadValue = readValues[i++];
                     }
                     string json = JsonConvert.SerializeObject(ReadDevices);
-                    bool isSuccess = false;
-                    Task.Run(() => HttpMessage.SendHttpMessage(json, ref isSuccess));
+                    Task.Run(() => HttpMessage.SendHttpMessage(json));
                     
                     var itemReady = ReadDevices.Find(x => x.VarName == "ReadyAddress");
                     if(itemReady != null && itemReady.ReadValue == 0)

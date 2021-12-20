@@ -10,8 +10,10 @@ using System.Threading.Tasks;
 namespace PLCInterface
 {
     static class HttpMessage
-    {        
-        public static void SendHttpMessage(string messageBodyJson, ref bool isSuccess)
+    {
+        public static bool IsSuccessToSend { get; set; } = false;
+
+        public static void SendHttpMessage(string messageBodyJson)
         {
             try
             {
@@ -35,12 +37,12 @@ namespace PLCInterface
                     var result = streamReader.ReadToEnd();
                     Console.WriteLine(result.ToString());
                 }
-                isSuccess = true;
+                IsSuccessToSend = true;
             }
             catch (Exception ex)
             {
                 Logger.Error($"{ex.Message}\r\n{ex.StackTrace}");
-                isSuccess = false;
+                IsSuccessToSend = false;
             }
             finally { }
         }

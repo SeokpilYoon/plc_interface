@@ -11,18 +11,21 @@
     </Window.DataContext>
     <Grid Background="#FF333333">
         <Grid.RowDefinitions>
+            <RowDefinition Height="90"/>
             <RowDefinition Height="80"/>
-            <RowDefinition Height="50"/>
             <RowDefinition Height="50"/>
         </Grid.RowDefinitions>
         <Grid Grid.Row="0">
-            <GroupBox x:Name="groupBox" Header="Command" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="15,15,0,0"  Width="220" Height="60" Foreground="white" />
-            <Button x:Name="button" Content="Start Service" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="35,40,0,0"  Width="80" Command="{Binding StartInterfaceCommand}" Background="{Binding StartPressedColor}"/>
-            <Button x:Name="button1" Content="Stop Service" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="135,40,0,0" Width="80" Command="{Binding StopInterfaceCommand}" Background="{Binding StopPressedColor}"/>
+            <TextBlock HorizontalAlignment="Left" VerticalAlignment="Top" Margin="10,10,0,0" Text="*Check admin mode if something is wrong." Foreground="white" />
+            <GroupBox x:Name="groupBox" Header="Command" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="15,25,0,0"  Width="220" Height="60" Foreground="white" />
+            <Button x:Name="button" Content="Start Service" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="35,50,0,0"  Width="80" Command="{Binding StartInterfaceCommand}" Background="{Binding StartPressedColor}"/>
+            <Button x:Name="button1" Content="Stop Service" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="135,50,0,0" Width="80" Command="{Binding StopInterfaceCommand}" Background="{Binding StopPressedColor}"/>
         </Grid>
         <Grid Grid.Row="1">
-            <TextBlock HorizontalAlignment="Left" VerticalAlignment="Top" Margin="30,15,0,0" Width ="200" Text="Connection Status" Foreground="white" />
-            <Rectangle HorizontalAlignment="Left" VerticalAlignment="Top" Margin="140,15,0,0" Width="20" Height="20" Stroke="Black" Fill="{Binding StatusColor}" />
+            <TextBlock HorizontalAlignment="Left" VerticalAlignment="Top" Margin="30,15,0,0" Width ="200" Text="PLC Connection Status" Foreground="white" />
+            <Rectangle HorizontalAlignment="Left" VerticalAlignment="Top" Margin="180,15,0,0" Width="20" Height="20" Stroke="Black" Fill="{Binding PlcStatusColor}" />
+            <TextBlock HorizontalAlignment="Left" VerticalAlignment="Top" Margin="30,45,0,0" Width ="200" Text="UI Connection Status" Foreground="white" />
+            <Rectangle HorizontalAlignment="Left" VerticalAlignment="Top" Margin="180,45,0,0" Width="20" Height="20" Stroke="Black" Fill="{Binding UiWebStatusColor}" />
         </Grid>
         <Grid Grid.Row="2">
             <TextBlock HorizontalAlignment="Left" VerticalAlignment="Top" Margin="30,15,0,0" Width ="200" Text="{Binding InfoMessage}" Foreground="white" />

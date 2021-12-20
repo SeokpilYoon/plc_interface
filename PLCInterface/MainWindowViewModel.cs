@@ -11,22 +11,36 @@ namespace PLCInterface
 {
     class MainWindowViewModel : ViewModelBase
     {
-        private static string ProgramVersion { get; set; } = "0.5.0";   // 2021.12.16
+        private static string ProgramVersion { get; set; } = "0.5.1";   // 2021.12.20
 
         MelsecInterface melsec;
         private System.Timers.Timer PlcInterfaceTimer = null;
 
-        private string statusColor = string.Empty;
-        public string StatusColor
+        private string plcStatusColor = string.Empty;
+        public string PlcStatusColor
         {
             get
             {
-                return statusColor;
+                return plcStatusColor;
             }
             set
             {
-                statusColor = value;
-                OnPropertyChanged("StatusColor");
+                plcStatusColor = value;
+                OnPropertyChanged("PlcStatusColor");
+            }
+        }
+
+        private string uiWebStatusColor = string.Empty;
+        public string UiWebStatusColor
+        {
+            get
+            {
+                return uiWebStatusColor;
+            }
+            set
+            {
+                uiWebStatusColor = value;
+                OnPropertyChanged("UiWebStatusColor");
             }
         }
 
@@ -100,13 +114,14 @@ namespace PLCInterface
 
         public MainWindowViewModel()
         {
-            Logger.Info($"Anomaly Detection PLC Communicator Version: [{ProgramVersion}]");
+            Logger.Info($"★★★ Anomaly Detection PLC Communicator Version: [{ProgramVersion}] ★★★");
 
             melsec = new MelsecInterface();
             StartInterfaceCommand = new RelayCommand(StartInterfaceCommandExe, param => this.CanExecute);
             StopInterfaceCommand = new RelayCommand(StopInterfaceCommandExe, param => this.CanExecute);
 
-            StatusColor = "gray";
+            PlcStatusColor = "gray";
+            UiWebStatusColor = "gray";
             StartPressedColor = "gray";
             StopPressedColor = "gray";
             InfoMessage = $"Configuration Setting Success: {melsec.IsConfigurationSuccess}";
@@ -147,8 +162,9 @@ namespace PLCInterface
                 PlcInterfaceTimer.Enabled = false;
 
                 StartPressedColor = "gray";
-                StopPressedColor = "greenyellow";                
-                StatusColor = "yellow";
+                StopPressedColor = "greenyellow";
+                PlcStatusColor = "yellow";
+                UiWebStatusColor = "yellow";
             }
             catch (Exception ex)
             {
@@ -161,14 +177,14 @@ namespace PLCInterface
         {
             if (melsec.IsAlive)
             {
-                StatusColor = "lightgreen";
+                PlcStatusColor = "greenyellow";
                 StartPressedColor = "greenyellow";
                 StopPressedColor = "gray";
                 PlcInterfaceTimer.Enabled = true;
             }
             else
             {
-                StatusColor = "red";
+                PlcStatusColor = "red";
                 StartPressedColor = "gray";
                 StopPressedColor = "gray";
             }
@@ -178,7 +194,16 @@ namespace PLCInterface
             try
             {
                 PlcInterfaceTimer.Enabled = false;
+                bool isSuccess = false;
                 InfoMessage = melsec.ReadPlcValues();
+                if (HttpMessage.IsSuccessToSend)
+                {
+                    UiWebStatusColor = "greenyellow";
+                }
+                else
+                {
+                    UiWebStatusColor = "red";
+                }
             }
             catch (Exception ex)
             {
