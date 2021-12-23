@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Configuration;
 using System.Linq;
 using System.Text;
 using System.Threading;
@@ -11,7 +12,7 @@ namespace PLCInterface
 {
     class MainWindowViewModel : ViewModelBase
     {
-        private static string ProgramVersion { get; set; } = "0.5.1";   // 2021.12.20
+        private static string ProgramVersion { get; set; } = "0.5.2";   // 2021.12.23
 
         MelsecInterface melsec;
         private System.Timers.Timer PlcInterfaceTimer = null;
@@ -128,7 +129,7 @@ namespace PLCInterface
 
             PlcInterfaceTimer = new System.Timers.Timer
             {
-                Interval = 250,
+                Interval = 100,
                 AutoReset = true,
                 Enabled = false
             };
@@ -194,7 +195,6 @@ namespace PLCInterface
             try
             {
                 PlcInterfaceTimer.Enabled = false;
-                bool isSuccess = false;
                 InfoMessage = melsec.ReadPlcValues();
                 if (HttpMessage.IsSuccessToSend)
                 {
@@ -204,11 +204,12 @@ namespace PLCInterface
                 {
                     UiWebStatusColor = "red";
                 }
+                PlcInterfaceTimer.Interval = Convert.ToInt32(ConfigurationManager.AppSettings["PlcReadInterval"] ?? "100"); // 0.5.2
             }
             catch (Exception ex)
             {
                 Logger.Error($"Exception on {System.Reflection.MethodBase.GetCurrentMethod().Name} >>> {ex.Message}\r\n{ex.StackTrace}");
-                InfoMessage = "Error while reading Plc Values";
+                InfoMessage = "Error while reading & operating PLC values";
             }
             finally
             {
