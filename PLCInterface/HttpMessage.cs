@@ -11,6 +11,7 @@ namespace PLCInterface
 {
     static class HttpMessage
     {
+        public static int UiHttpPort { get; set; } = Convert.ToInt32(ConfigurationManager.AppSettings["HttpSendPort"] ?? "6161");
         public static bool IsSuccessToSend { get; set; } = false;
 
         public static void SendHttpMessage(string messageBodyJson)
@@ -19,7 +20,7 @@ namespace PLCInterface
             {
                 Logger.Info(messageBodyJson);
 
-                string url = $"http://localhost:6161/";
+                string url = $"http://localhost:{UiHttpPort}/";
                 //MessageBox.Show(url);
                 var httpWebRequest = (HttpWebRequest)WebRequest.Create(url);
 

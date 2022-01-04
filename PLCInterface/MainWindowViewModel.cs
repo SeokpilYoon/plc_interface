@@ -12,7 +12,7 @@ namespace PLCInterface
 {
     class MainWindowViewModel : ViewModelBase
     {
-        private static string ProgramVersion { get; set; } = "0.5.3";   // 2022.01.04
+        private static string ProgramVersion { get; set; } = "0.5.4";   // 2022.01.04
 
         MelsecInterface melsec;
         private System.Timers.Timer PlcInterfaceTimer = null;

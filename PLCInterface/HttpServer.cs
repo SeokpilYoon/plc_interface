@@ -17,7 +17,7 @@ namespace PLCInterface
     {
         PlcVariable writeDevice; // = new PlcVariable();
         
-        private string bindingAddress;  // = "http://*:6161/";
+        private string bindingAddress = string.Empty;  // = "http://*:6161/";
 
         private HttpListener listener = null;
         private Thread listenThread = null;
