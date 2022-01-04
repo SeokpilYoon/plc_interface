@@ -75,10 +75,10 @@ namespace PLCInterface
         private void ListenHttpRequest()
         {
             try
-            {
+            {                
                 MelsecInterface melsec = new MelsecInterface();
                 melsec.StartInteface();
-
+                
                 while (true)
                 {
                     HttpListenerContext context = listener.GetContext();
@@ -89,7 +89,7 @@ namespace PLCInterface
                                                          request.ContentEncoding))
                     {
                         jsonText = reader.ReadToEnd();
-
+                        Logger.Trace($"{jsonText}");
                         try
                         {
                             writeDevice = JsonConvert.DeserializeObject<PlcVariable>(jsonText);

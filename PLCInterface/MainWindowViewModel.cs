@@ -12,7 +12,7 @@ namespace PLCInterface
 {
     class MainWindowViewModel : ViewModelBase
     {
-        private static string ProgramVersion { get; set; } = "0.5.2";   // 2021.12.23
+        private static string ProgramVersion { get; set; } = "0.5.3";   // 2022.01.04
 
         MelsecInterface melsec;
         private System.Timers.Timer PlcInterfaceTimer = null;
@@ -134,6 +134,9 @@ namespace PLCInterface
                 Enabled = false
             };
             PlcInterfaceTimer.Elapsed += new ElapsedEventHandler(ReadPlcValue);
+
+            var httpServer = new HttpServer();
+            Task.Run(() => httpServer.ActivateHttpService());
         }
 
         private void StartInterfaceCommandExe(object obj)
