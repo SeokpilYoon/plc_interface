@@ -12,7 +12,7 @@ namespace PLCInterface
 {
     class MainWindowViewModel : ViewModelBase
     {
-        private static string ProgramVersion { get; set; } = "0.5.4";   // 2022.01.04
+        private static string ProgramVersion { get; set; } = "0.5.5";   // 2022.01.07
 
         MelsecInterface melsec;
         private System.Timers.Timer PlcInterfaceTimer = null;
@@ -157,12 +157,15 @@ namespace PLCInterface
         {
             try
             {
-                // true가 되기까지 기다렸다가, false로 세팅
-                while (!PlcInterfaceTimer.Enabled)
+                if (melsec.IsAlive) // 0.5.5
                 {
-                    Thread.Sleep(100);
+                    // true가 되기까지 기다렸다가, false로 세팅
+                    while (!PlcInterfaceTimer.Enabled)
+                    {
+                        Thread.Sleep(100);
+                    }
                 }
-
+                
                 PlcInterfaceTimer.Enabled = false;
 
                 StartPressedColor = "gray";
@@ -179,18 +182,21 @@ namespace PLCInterface
 
         private void SetConnectionStatus()
         {
+            StartPressedColor = "greenyellow";
+            StopPressedColor = "gray";
+
             if (melsec.IsAlive)
             {
                 PlcStatusColor = "greenyellow";
-                StartPressedColor = "greenyellow";
-                StopPressedColor = "gray";
+                //StartPressedColor = "greenyellow";
+                //StopPressedColor = "gray";
                 PlcInterfaceTimer.Enabled = true;
             }
             else
             {
                 PlcStatusColor = "red";
-                StartPressedColor = "gray";
-                StopPressedColor = "gray";
+                //StartPressedColor = "gray";
+                //StopPressedColor = "gray";
             }
         }
         private void ReadPlcValue(object source, ElapsedEventArgs e)
