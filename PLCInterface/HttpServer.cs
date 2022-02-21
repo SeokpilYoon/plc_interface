@@ -75,9 +75,18 @@ namespace PLCInterface
         private void ListenHttpRequest()
         {
             try
-            {                
-                MelsecInterface melsec = new MelsecInterface();
-                melsec.StartInteface();
+            {
+                //CommonInterface plc = new MelsecInterface();
+                CommonInterface plc;
+                byte plcType = Convert.ToByte(ConfigurationManager.AppSettings["PlcType"] ?? "1");
+                if (plcType == 1)
+                    plc = new MelsecInterface();
+                else if (plcType == 2)
+                    plc = new ModbusInterface();
+                else
+                    plc = new MelsecInterface();
+
+                plc.StartInteface();
                 
                 while (true)
                 {
@@ -92,16 +101,24 @@ namespace PLCInterface
                         Logger.Trace($"{jsonText}");
                         try
                         {
+                            string writeDeviceOn = ConfigurationManager.AppSettings["AnomalyOnAddress"] ?? string.Empty;
+                            string writeDeviceOff = ConfigurationManager.AppSettings["AnomalyOffAddress"] ?? string.Empty;
+
                             writeDevice = JsonConvert.DeserializeObject<PlcVariable>(jsonText);
                             if (writeDevice.VarName == "AnomalyOnAddress" && writeDevice.ReadValue == 1)
                             {
-                                string writeDevice = ConfigurationManager.AppSettings["AnomalyOnAddress"] ?? string.Empty;
-                                melsec.SetAPLCValueOn(writeDevice);
+                                plc.SetAPLCValueOn(writeDeviceOn);
+                                plc.SetAPLCValueOff(writeDeviceOff);
                                 if ((ConfigurationManager.AppSettings["AnomalyAutoOff"] ?? string.Empty).ToUpper().Equals("TRUE"))
                                 {
                                     Thread.Sleep(500);
-                                    melsec.SetAPLCValueOff(writeDevice);
+                                    plc.SetAPLCValueOff(writeDeviceOn);
                                 }
+                            }
+                            else if (writeDevice.VarName == "AnomalyOffAddress" && writeDevice.ReadValue == 1)
+                            {
+                                plc.SetAPLCValueOff(writeDeviceOn);
+                                plc.SetAPLCValueOn(writeDeviceOff);
                             }
                         }
                         catch (Exception ex)

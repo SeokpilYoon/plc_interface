@@ -26,13 +26,11 @@ namespace PLCInterface
         }
     }
 
-    public class MelsecInterface
+    class MelsecInterface : CommonInterface
     {
         public ActUtlTypeLib.ActUtlType aut;
         public int StationNo { get; set; }
         private static int RetryNumLimit { get; set; } = 3;
-        public bool IsConfigurationSuccess { get; set; } = false;
-        public bool IsAlive { get; set; } = false;
         public string DeviceRandomToRead { get; set; } = string.Empty;
         public bool IsUIReady { get; set; } = false;
 
@@ -125,14 +123,14 @@ namespace PLCInterface
                 }
             }
         }
-        public string StartInteface()
+        public override string StartInteface()
         {
             string returnMessage = string.Empty;
             try
             {
                 aut = new ActUtlTypeLib.ActUtlType();
                 if (CheckConnectionInfo())
-                {                    
+                {
                     if (OpenConnection() == 0)
                     {
                         IsAlive = true;
@@ -186,7 +184,7 @@ namespace PLCInterface
             
             return isChecked;
         }
-        public int OpenConnection()
+        public override int OpenConnection()
         {
             aut.ActLogicalStationNumber = StationNo;
 
@@ -211,7 +209,7 @@ namespace PLCInterface
             return res;
         }
 
-        public int CloseConnection()
+        public override int CloseConnection()
         {
             dynamic res = aut.Close();
             if (res != 0)
@@ -234,7 +232,7 @@ namespace PLCInterface
             return res;
         }
 
-        public string ReadPlcValues()
+        public override string ReadPlcValues()
         {
             try
             {
@@ -564,12 +562,12 @@ namespace PLCInterface
             return res;
         }
 
-        public int SetAPLCValueOff(string device)
+        public override int SetAPLCValueOff(string device)
         {
             return SetAPLCValue(device, 0);
         }
 
-        public int SetAPLCValueOn(string device)
+        public override int SetAPLCValueOn(string device)
         {
             return SetAPLCValue(device, 1);
         }

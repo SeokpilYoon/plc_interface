@@ -10,11 +10,25 @@ using System.Windows.Input;
 
 namespace PLCInterface
 {
+    abstract class CommonInterface
+    {
+        public bool IsConfigurationSuccess { get; set; } = false;
+        public bool IsAlive { get; set; } = false;
+
+        public abstract string StartInteface();
+        public abstract int OpenConnection();
+        public abstract int CloseConnection();
+        public abstract string ReadPlcValues();
+        public abstract int SetAPLCValueOn(string device);
+        public abstract int SetAPLCValueOff(string device);
+    }
+
     class MainWindowViewModel : ViewModelBase
     {
-        private static string ProgramVersion { get; set; } = "0.5.5";   // 2022.01.07
+        private static string ProgramVersion { get; set; } = "0.5.6";   // 2022.02.14
 
-        MelsecInterface melsec;
+        //MelsecInterface melsec;
+        CommonInterface plc;
         private System.Timers.Timer PlcInterfaceTimer = null;
 
         private string plcStatusColor = string.Empty;
@@ -117,7 +131,14 @@ namespace PLCInterface
         {
             Logger.Info($"★★★ Anomaly Detection PLC Communicator Version: [{ProgramVersion}] ★★★");
 
-            melsec = new MelsecInterface();
+            byte plcType = Convert.ToByte(ConfigurationManager.AppSettings["PlcType"] ?? "1");
+            if (plcType == 1)
+                plc = new MelsecInterface();
+            else if(plcType == 2)
+                plc = new ModbusInterface();
+            else
+                plc = new MelsecInterface();
+
             StartInterfaceCommand = new RelayCommand(StartInterfaceCommandExe, param => this.CanExecute);
             StopInterfaceCommand = new RelayCommand(StopInterfaceCommandExe, param => this.CanExecute);
 
@@ -125,7 +146,7 @@ namespace PLCInterface
             UiWebStatusColor = "gray";
             StartPressedColor = "gray";
             StopPressedColor = "gray";
-            InfoMessage = $"Configuration Setting Success: {melsec.IsConfigurationSuccess}";
+            InfoMessage = $"Configuration Setting Success: {plc.IsConfigurationSuccess}";
 
             PlcInterfaceTimer = new System.Timers.Timer
             {
@@ -143,7 +164,7 @@ namespace PLCInterface
         {
             try
             {
-                InfoMessage = melsec.StartInteface();
+                InfoMessage = plc.StartInteface();
                 SetConnectionStatus();
             }
             catch(Exception ex)
@@ -157,7 +178,7 @@ namespace PLCInterface
         {
             try
             {
-                if (melsec.IsAlive) // 0.5.5
+                if (plc.IsAlive) // 0.5.5
                 {
                     // true가 되기까지 기다렸다가, false로 세팅
                     while (!PlcInterfaceTimer.Enabled)
@@ -185,7 +206,7 @@ namespace PLCInterface
             StartPressedColor = "greenyellow";
             StopPressedColor = "gray";
 
-            if (melsec.IsAlive)
+            if (plc.IsAlive)
             {
                 PlcStatusColor = "greenyellow";
                 //StartPressedColor = "greenyellow";
@@ -204,7 +225,7 @@ namespace PLCInterface
             try
             {
                 PlcInterfaceTimer.Enabled = false;
-                InfoMessage = melsec.ReadPlcValues();
+                InfoMessage = plc.ReadPlcValues();
                 if (HttpMessage.IsSuccessToSend)
                 {
                     UiWebStatusColor = "greenyellow";
