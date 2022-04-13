@@ -25,7 +25,7 @@ namespace PLCInterface
 
     class MainWindowViewModel : ViewModelBase
     {
-        private static string ProgramVersion { get; set; } = "0.5.6";   // 2022.02.14
+        private static string ProgramVersion { get; set; } = "0.5.7";   // 2022.04.13
 
         //MelsecInterface melsec;
         CommonInterface plc;
@@ -127,6 +127,21 @@ namespace PLCInterface
             }
         }
 
+        // SubTitle
+        private string mainTitle = string.Empty;
+        public string MainTitle
+        {
+            get
+            {
+                return mainTitle;
+            }
+            set
+            {
+                mainTitle = value;
+                OnPropertyChanged("MainTitle");
+            }
+        }
+
         public MainWindowViewModel()
         {
             Logger.Info($"★★★ Anomaly Detection PLC Communicator Version: [{ProgramVersion}] ★★★");
@@ -147,6 +162,9 @@ namespace PLCInterface
             StartPressedColor = "gray";
             StopPressedColor = "gray";
             InfoMessage = $"Configuration Setting Success: {plc.IsConfigurationSuccess}";
+
+            string subTitle = ConfigurationManager.AppSettings["SubTitle"] ?? string.Empty; // SubTitle
+            MainTitle = $"Ver.{ProgramVersion} {subTitle}";                                 // SubTitle
 
             PlcInterfaceTimer = new System.Timers.Timer
             {

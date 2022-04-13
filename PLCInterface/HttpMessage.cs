@@ -21,7 +21,7 @@ namespace PLCInterface
                 Logger.Info(messageBodyJson);
 
                 string url = $"http://localhost:{UiHttpPort}/";
-                //MessageBox.Show(url);
+                Logger.Info($"Http Send url : {url}");
                 var httpWebRequest = (HttpWebRequest)WebRequest.Create(url);
 
                 httpWebRequest.ContentType = "application/json";
