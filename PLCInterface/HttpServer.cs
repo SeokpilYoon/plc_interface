@@ -107,8 +107,10 @@ namespace PLCInterface
                             writeDevice = JsonConvert.DeserializeObject<PlcVariable>(jsonText);
                             if (writeDevice.VarName == "AnomalyOnAddress" && writeDevice.ReadValue == 1)
                             {
-                                plc.SetAPLCValueOn(writeDeviceOn);
-                                plc.SetAPLCValueOff(writeDeviceOff);
+                                if(writeDeviceOn != string.Empty)
+                                    plc.SetAPLCValueOn(writeDeviceOn);
+                                if(writeDeviceOff != string.Empty)
+                                    plc.SetAPLCValueOff(writeDeviceOff);
                                 if ((ConfigurationManager.AppSettings["AnomalyAutoOff"] ?? string.Empty).ToUpper().Equals("TRUE"))
                                 {
                                     Thread.Sleep(500);
@@ -117,8 +119,10 @@ namespace PLCInterface
                             }
                             else if (writeDevice.VarName == "AnomalyOffAddress" && writeDevice.ReadValue == 1)
                             {
-                                plc.SetAPLCValueOff(writeDeviceOn);
-                                plc.SetAPLCValueOn(writeDeviceOff);
+                                if (writeDeviceOn != string.Empty)
+                                    plc.SetAPLCValueOff(writeDeviceOn);
+                                if (writeDeviceOff != string.Empty)
+                                    plc.SetAPLCValueOn(writeDeviceOff);
                             }
                         }
                         catch (Exception ex)

@@ -39,6 +39,8 @@ namespace PLCInterface
                     Console.WriteLine(result.ToString());
                 }
                 IsSuccessToSend = true;
+                httpWebRequest.Abort();
+                httpResponse.Close();
             }
             catch (Exception ex)
             {

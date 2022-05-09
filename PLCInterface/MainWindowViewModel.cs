@@ -25,7 +25,7 @@ namespace PLCInterface
 
     class MainWindowViewModel : ViewModelBase
     {
-        private static string ProgramVersion { get; set; } = "0.5.8";   // 2022.04.19 Modbus write coil 디바이스가 계속 연결이 끊겨 exception 발생하여 connect+retry 추가함
+        private static string ProgramVersion { get; set; } = "0.5.9";   // 2022.05.09 알람 응답 늦는 현상 및 프로그램 응답없음 현상 수정
 
         //MelsecInterface melsec;
         CommonInterface plc;
@@ -199,9 +199,14 @@ namespace PLCInterface
                 if (plc.IsAlive) // 0.5.5
                 {
                     // true가 되기까지 기다렸다가, false로 세팅
+                    int loopCount = 0;
                     while (!PlcInterfaceTimer.Enabled)
                     {
+                        Logger.Info("Stop Retry");
                         Thread.Sleep(100);
+                        if (loopCount > 5)
+                            break;
+                        loopCount++;
                     }
                 }
                 
