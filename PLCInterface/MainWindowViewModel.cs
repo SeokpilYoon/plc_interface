@@ -25,7 +25,7 @@ namespace PLCInterface
 
     class MainWindowViewModel : ViewModelBase
     {
-        private static string ProgramVersion { get; set; } = "0.5.7";   // 2022.04.13
+        private static string ProgramVersion { get; set; } = "0.5.8";   // 2022.04.19 Modbus write coil 디바이스가 계속 연결이 끊겨 exception 발생하여 connect+retry 추가함
 
         //MelsecInterface melsec;
         CommonInterface plc;
