@@ -237,32 +237,37 @@ namespace PLCInterface
         {
             int res = 0;
 
-            try
+            for (int j = 0; j < 3; j++)
             {
-                lock (master)
+                try
                 {
-                    int i = 0;
-                    foreach(PlcVariable item in ReadDevices)
+                    lock (master)
                     {
-                        ushort modbusDevice = Convert.ToUInt16(item.DeviceAddress);
-                        bool[] coilstatus = master.ReadCoils(slaveID, modbusDevice, 1);
-                        if(coilstatus[0]==true)
-                            item.ReadValue = 1;
-                        else
-                            item.ReadValue = 0;
-                        values[i++] = item.ReadValue;
-                    }
+                        int i = 0;
+                        foreach (PlcVariable item in ReadDevices)
+                        {
+                            ushort modbusDevice = Convert.ToUInt16(item.DeviceAddress);
+                            bool[] coilstatus = master.ReadCoils(slaveID, modbusDevice, 1);
+                            if (coilstatus[0] == true)
+                                item.ReadValue = 1;
+                            else
+                                item.ReadValue = 0;
+                            values[i++] = item.ReadValue;
+                        }
 
-                    Logger.Debug($"Modbus Read Coils Success");
-                    return res;
+                        Logger.Debug($"Modbus Read Coils Success");
+                        return res;
+                    }
+                    break;
                 }
+                catch (Exception ex)
+                {
+                    Logger.Error($"Exception on {System.Reflection.MethodBase.GetCurrentMethod().Name} >>> {ex.Message}\r\n{ex.StackTrace}");
+                    res = -1;
+                    StartInteface();
+                }
+                finally { }
             }
-            catch (Exception ex)
-            {
-                Logger.Error($"Exception on {System.Reflection.MethodBase.GetCurrentMethod().Name} >>> {ex.Message}\r\n{ex.StackTrace}");
-                res = -1;
-            }
-            finally { }
 
             return res;
         }
@@ -271,18 +276,26 @@ namespace PLCInterface
         {
             int res = 1;
 
-            try
+            for (int i = 0; i < 3; i++)
             {
-                ushort modbusDevice = Convert.ToUInt16(device);
-                master.WriteSingleCoil(slaveID, modbusDevice, value);
-                Logger.Debug($"Modbus Write - device:{device}, value:{value}"); 
+                try
+                {
+                    lock (master)
+                    {
+                        ushort modbusDevice = Convert.ToUInt16(device);
+                        master.WriteSingleCoil(slaveID, modbusDevice, value);
+                        Logger.Debug($"Modbus Write - device:{device}, value:{value}");
+                    }
+                    break;
+                }
+                catch (Exception ex)
+                {
+                    Logger.Error($"Exception on {System.Reflection.MethodBase.GetCurrentMethod().Name} >>> {ex.Message}\r\n{ex.StackTrace}");
+                    res = -1;
+                    StartInteface();    // write coil 디바이스가 계속 연결이 끊겨 exception 발생하여 connect+retry 추가함
+                }
+                finally { }
             }
-            catch (Exception ex)
-            {
-                Logger.Error($"Exception on {System.Reflection.MethodBase.GetCurrentMethod().Name} >>> {ex.Message}\r\n{ex.StackTrace}");
-                res = -1;
-            }
-            finally { }
 
             return res;
         }
