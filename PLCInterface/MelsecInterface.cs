@@ -348,7 +348,9 @@ namespace PLCInterface
                 {
                     for (int i = 0; i < RetryNumLimit; i++)
                     {
+                        Logger.Debug("Start ReadDevice Random");
                         obj = aut.ReadDeviceRandom(device, size, out values[0]);
+                        Logger.Debug("End ReadDevice Random");
                         if (Convert.ToInt32(obj) == 0)
                         {
                             Logger.Debug($"PLC Random Block Read Success - device:{device.Replace("\n", "/")}, size:{size}, value:{values[0]}");
@@ -357,14 +359,16 @@ namespace PLCInterface
                         else
                         {
                             Logger.Error($"{System.Reflection.MethodBase.GetCurrentMethod().Name} >>> Retry to Read PLC Random Value. Addr:{device.Replace("\n", "/")}, Melsec errcode:0x{Convert.ToString(Convert.ToInt32(obj), 16)}");
-                            Thread.Sleep(300);
+                            Thread.Sleep(10);
                         }
                     }
 
                     aut.Close();
-                    Thread.Sleep(500);
+                    Thread.Sleep(100);
                     var openRs = aut.Open();
+                    Logger.Debug("Start2 ReadDevice Random");
                     obj = aut.ReadDeviceRandom(device, size, out values[0]);
+                    Logger.Debug("End2 ReadDevice Random");
                     if (Convert.ToInt32(obj) != 0)
                     {
                         Logger.Error($"{System.Reflection.MethodBase.GetCurrentMethod().Name}(): PLC Interface Failed. device:{device.Replace("\n", "/")}, err code: 0x{Convert.ToString(Convert.ToInt32(obj), 16)}");
