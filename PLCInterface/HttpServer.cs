@@ -123,6 +123,11 @@ namespace PLCInterface
                                     plc.SetAPLCValueOff(writeDeviceOn);
                                 if (writeDeviceOff != string.Empty)
                                     plc.SetAPLCValueOn(writeDeviceOff);
+                                if ((ConfigurationManager.AppSettings["AnomalyAutoOff"] ?? string.Empty).ToUpper().Equals("TRUE"))
+                                {
+                                    Thread.Sleep(500);
+                                    plc.SetAPLCValueOff(writeDeviceOff);
+                                }
                             }
                         }
                         catch (Exception ex)

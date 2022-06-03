@@ -25,11 +25,12 @@ namespace PLCInterface
 
     class MainWindowViewModel : ViewModelBase
     {
-        private static string ProgramVersion { get; set; } = "0.5.9";   // 2022.05.09 알람 응답 늦는 현상 및 프로그램 응답없음 현상 수정
+        private static string ProgramVersion { get; set; } = "0.5.11";   // 2022.05.28 Alive bit 추가
 
         //MelsecInterface melsec;
         CommonInterface plc;
         private System.Timers.Timer PlcInterfaceTimer = null;
+        private System.Timers.Timer PlcAliveTimer = null;
 
         private string plcStatusColor = string.Empty;
         public string PlcStatusColor
@@ -142,6 +143,31 @@ namespace PLCInterface
             }
         }
 
+        private Boolean aliveOn = false;
+        public Boolean AliveOn
+        {
+            get
+            {
+                return aliveOn;
+            }
+            set
+            {
+                aliveOn = value;
+            }
+        }
+        private string aliveDevice = string.Empty;
+        public string AliveDevice
+        {
+            get
+            {
+                return aliveDevice;
+            }
+            set
+            {
+                aliveDevice = value;
+            }
+        }
+
         public MainWindowViewModel()
         {
             Logger.Info($"★★★ Anomaly Detection PLC Communicator Version: [{ProgramVersion}] ★★★");
@@ -173,6 +199,16 @@ namespace PLCInterface
                 Enabled = false
             };
             PlcInterfaceTimer.Elapsed += new ElapsedEventHandler(ReadPlcValue);
+
+            PlcAliveTimer = new System.Timers.Timer
+            {
+                Interval = 2000,
+                AutoReset = true,
+                Enabled = false
+            };
+            PlcAliveTimer.Elapsed += new ElapsedEventHandler(WriteAlive);
+
+            AliveDevice = ConfigurationManager.AppSettings["AliveAddress"] ?? string.Empty;
 
             var httpServer = new HttpServer();
             Task.Run(() => httpServer.ActivateHttpService());
@@ -211,6 +247,7 @@ namespace PLCInterface
                 }
                 
                 PlcInterfaceTimer.Enabled = false;
+                PlcAliveTimer.Enabled = false;
 
                 StartPressedColor = "gray";
                 StopPressedColor = "greenyellow";
@@ -235,6 +272,7 @@ namespace PLCInterface
                 //StartPressedColor = "greenyellow";
                 //StopPressedColor = "gray";
                 PlcInterfaceTimer.Enabled = true;
+                PlcAliveTimer.Enabled = true;
             }
             else
             {
@@ -243,6 +281,7 @@ namespace PLCInterface
                 //StopPressedColor = "gray";
             }
         }
+
         private void ReadPlcValue(object source, ElapsedEventArgs e)
         {
             try
@@ -267,6 +306,39 @@ namespace PLCInterface
             finally
             {
                 PlcInterfaceTimer.Enabled = true;
+            }
+        }
+
+        private void WriteAlive(object source, ElapsedEventArgs e)
+        {
+            try
+            {
+                PlcAliveTimer.Enabled = false;
+                if (AliveDevice != string.Empty)
+                {
+                    int res;
+                    if (AliveOn == true)
+                    {
+                        res = plc.SetAPLCValueOff(AliveDevice);
+                        AliveOn = false;
+                    }
+                    else
+                    {
+                        res = plc.SetAPLCValueOn(AliveDevice);
+                        AliveOn = true;
+                    }
+                }
+                
+                PlcAliveTimer.Interval = Convert.ToInt32(ConfigurationManager.AppSettings["PlcAliveInterval"] ?? "2000"); // 0.5.2
+            }
+            catch (Exception ex)
+            {
+                Logger.Error($"Exception on {System.Reflection.MethodBase.GetCurrentMethod().Name} >>> {ex.Message}\r\n{ex.StackTrace}");
+                InfoMessage = "Error while reading & operating PLC values";
+            }
+            finally
+            {
+                PlcAliveTimer.Enabled = true;
             }
         }
     }

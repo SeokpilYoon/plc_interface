@@ -80,6 +80,7 @@ namespace PLCInterface
 
                 CheckPlcAddress(interfaceIndex++, "AnomalyOnAddress", false);
                 CheckPlcAddress(interfaceIndex++, "AnomalyOffAddress", false);
+                CheckPlcAddress(interfaceIndex++, "AliveAddress", false);
 
                 #endregion Write Configuration
 
