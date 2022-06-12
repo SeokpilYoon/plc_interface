@@ -26,7 +26,10 @@
             <TextBlock HorizontalAlignment="Left" VerticalAlignment="Top" Margin="30,8,0,0" Width ="200" Text="PLC Connection Status" Foreground="white" />
             <Rectangle HorizontalAlignment="Left" VerticalAlignment="Top" Margin="180,8,0,0" Width="20" Height="20" Stroke="Black" Fill="{Binding PlcStatusColor}" />
             <TextBlock HorizontalAlignment="Left" VerticalAlignment="Top" Margin="30,35,0,0" Width ="200" Text="UI Connection Status" Foreground="white" />
-            <Rectangle HorizontalAlignment="Left" VerticalAlignment="Top" Margin="180,35,0,0" Width="20" Height="20" Stroke="Black" Fill="{Binding UiWebStatusColor}" />
+            <Rectangle HorizontalAlignment="Left" VerticalAlignment="Top" Margin="180,35,0,0" Width="20" Height="20" Stroke="Black" Fill="{Binding UiWebStatusColor[0]}" />
+            <Rectangle HorizontalAlignment="Left" VerticalAlignment="Top" Margin="200,35,0,0" Width="20" Height="20" Stroke="Black" Fill="{Binding UiWebStatusColor[1]}" />
+            <Rectangle HorizontalAlignment="Left" VerticalAlignment="Top" Margin="220,35,0,0" Width="20" Height="20" Stroke="Black" Fill="{Binding UiWebStatusColor[2]}" />
+            <Rectangle HorizontalAlignment="Left" VerticalAlignment="Top" Margin="240,35,0,0" Width="20" Height="20" Stroke="Black" Fill="{Binding UiWebStatusColor[3]}" />
         </Grid>
         <Grid Grid.Row="2">
             <Grid.RowDefinitions>

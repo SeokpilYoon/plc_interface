@@ -105,6 +105,12 @@ namespace PLCInterface
                             string writeDeviceOff = ConfigurationManager.AppSettings["AnomalyOffAddress"] ?? string.Empty;
 
                             writeDevice = JsonConvert.DeserializeObject<PlcVariable>(jsonText);
+                            if (writeDevice.ChannelNo > 1)
+                            {
+                                writeDeviceOn = ConfigurationManager.AppSettings[$"AnomalyOnAddress{writeDevice.ChannelNo}"] ?? string.Empty;
+                                writeDeviceOff = ConfigurationManager.AppSettings[$"AnomalyOffAddress{writeDevice.ChannelNo}"] ?? string.Empty;
+                            }
+                            
                             if (writeDevice.VarName == "AnomalyOnAddress" && writeDevice.ReadValue == 1)
                             {
                                 if(writeDeviceOn != string.Empty)

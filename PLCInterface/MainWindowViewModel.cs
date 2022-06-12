@@ -7,6 +7,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Timers;
 using System.Windows.Input;
+using System.Collections.ObjectModel;
 
 namespace PLCInterface
 {
@@ -25,7 +26,7 @@ namespace PLCInterface
 
     class MainWindowViewModel : ViewModelBase
     {
-        private static string ProgramVersion { get; set; } = "0.5.11";   // 2022.05.28 Alive bit 추가
+        private static string ProgramVersion { get; set; } = "0.6.2";
 
         //MelsecInterface melsec;
         CommonInterface plc;
@@ -46,8 +47,8 @@ namespace PLCInterface
             }
         }
 
-        private string uiWebStatusColor = string.Empty;
-        public string UiWebStatusColor
+        private ObservableCollection<string> uiWebStatusColor;
+        public ObservableCollection<string> UiWebStatusColor
         {
             get
             {
@@ -183,9 +184,12 @@ namespace PLCInterface
             StartInterfaceCommand = new RelayCommand(StartInterfaceCommandExe, param => this.CanExecute);
             StopInterfaceCommand = new RelayCommand(StopInterfaceCommandExe, param => this.CanExecute);
 
+            UiWebStatusColor = new ObservableCollection<string>();
+
             PlcStatusColor = "gray";
-            UiWebStatusColor = "gray";
-            StartPressedColor = "gray";
+            for (int i=0; i<4; i++)
+                UiWebStatusColor.Add("gray");
+             StartPressedColor = "gray";
             StopPressedColor = "gray";
             InfoMessage = $"Configuration Setting Success: {plc.IsConfigurationSuccess}";
 
@@ -252,7 +256,8 @@ namespace PLCInterface
                 StartPressedColor = "gray";
                 StopPressedColor = "greenyellow";
                 PlcStatusColor = "yellow";
-                UiWebStatusColor = "yellow";
+                for (int i = 0; i < 4; i++)
+                    UiWebStatusColor[i] = "yellow";
             }
             catch (Exception ex)
             {
@@ -288,13 +293,38 @@ namespace PLCInterface
             {
                 PlcInterfaceTimer.Enabled = false;
                 InfoMessage = plc.ReadPlcValues();
-                if (HttpMessage.IsSuccessToSend)
+
+                if (HttpMessage.IsSuccessToSend1)
                 {
-                    UiWebStatusColor = "greenyellow";
+                    UiWebStatusColor[0] = "greenyellow";
                 }
                 else
                 {
-                    UiWebStatusColor = "red";
+                    UiWebStatusColor[0] = "red";
+                }
+                if (HttpMessage.IsSuccessToSend2)
+                {
+                    UiWebStatusColor[1] = "greenyellow";
+                }
+                else
+                {
+                    UiWebStatusColor[1] = "red";
+                }
+                if (HttpMessage.IsSuccessToSend3)
+                {
+                    UiWebStatusColor[2] = "greenyellow";
+                }
+                else
+                {
+                    UiWebStatusColor[2] = "red";
+                }
+                if (HttpMessage.IsSuccessToSend4)
+                {
+                    UiWebStatusColor[3] = "greenyellow";
+                }
+                else
+                {
+                    UiWebStatusColor[3] = "red";
                 }
                 PlcInterfaceTimer.Interval = Convert.ToInt32(ConfigurationManager.AppSettings["PlcReadInterval"] ?? "100"); // 0.5.2
             }
