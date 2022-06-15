@@ -26,7 +26,7 @@ namespace PLCInterface
 
     class MainWindowViewModel : ViewModelBase
     {
-        private static string ProgramVersion { get; set; } = "0.6.2";
+        private static string ProgramVersion { get; set; } = "0.6.3";	// LGD Film Remover
 
         //MelsecInterface melsec;
         CommonInterface plc;

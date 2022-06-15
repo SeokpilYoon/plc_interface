@@ -103,6 +103,7 @@ namespace PLCInterface
                         {
                             string writeDeviceOn = ConfigurationManager.AppSettings["AnomalyOnAddress"] ?? string.Empty;
                             string writeDeviceOff = ConfigurationManager.AppSettings["AnomalyOffAddress"] ?? string.Empty;
+                            string writeDeviceCapture = ConfigurationManager.AppSettings["CaptureCompleteAddress"] ?? string.Empty;
 
                             writeDevice = JsonConvert.DeserializeObject<PlcVariable>(jsonText);
                             if (writeDevice.ChannelNo > 1)
@@ -117,6 +118,8 @@ namespace PLCInterface
                                     plc.SetAPLCValueOn(writeDeviceOn);
                                 if(writeDeviceOff != string.Empty)
                                     plc.SetAPLCValueOff(writeDeviceOff);
+                                if (writeDeviceCapture != string.Empty)
+                                    plc.SetAPLCValueOff(writeDeviceCapture);
                                 if ((ConfigurationManager.AppSettings["AnomalyAutoOff"] ?? string.Empty).ToUpper().Equals("TRUE"))
                                 {
                                     Thread.Sleep(500);
@@ -129,11 +132,18 @@ namespace PLCInterface
                                     plc.SetAPLCValueOff(writeDeviceOn);
                                 if (writeDeviceOff != string.Empty)
                                     plc.SetAPLCValueOn(writeDeviceOff);
+                                if (writeDeviceCapture != string.Empty)
+                                    plc.SetAPLCValueOff(writeDeviceCapture);
                                 if ((ConfigurationManager.AppSettings["AnomalyAutoOff"] ?? string.Empty).ToUpper().Equals("TRUE"))
                                 {
                                     Thread.Sleep(500);
                                     plc.SetAPLCValueOff(writeDeviceOff);
                                 }
+                            }
+                            else if (writeDevice.VarName == "CaptureCompleteAddress" && writeDevice.ReadValue == 1)
+                            {
+                                if (writeDeviceCapture != string.Empty)
+                                    plc.SetAPLCValueOn(writeDeviceCapture);
                             }
                         }
                         catch (Exception ex)

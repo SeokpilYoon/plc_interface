@@ -86,6 +86,8 @@ namespace PLCInterface
                     CheckPlcAddress(interfaceIndex++, "TriggerAddress", true, j+1);
                     CheckPlcAddress(interfaceIndex++, "MbbTriggerAddress", true, j+1);
                     CheckPlcAddress(interfaceIndex++, "ReadyAddress", true, j+1);
+                    CheckPlcAddress(interfaceIndex++, "Word1ModelAddress", true, j + 1);
+                    CheckPlcAddress(interfaceIndex++, "Word2ModelAddress", true, j + 1);
                 }
 
                 #endregion Read Configuration
@@ -98,6 +100,7 @@ namespace PLCInterface
                 CheckPlcAddress(interfaceIndex++, "AnomalyOnAddress", false);
                 CheckPlcAddress(interfaceIndex++, "AnomalyOffAddress", false);
                 CheckPlcAddress(interfaceIndex++, "AliveAddress", false);
+                CheckPlcAddress(interfaceIndex++, "CaptureCompleteAddress", false);
 
                 #endregion Write Configuration
 
@@ -614,6 +617,12 @@ namespace PLCInterface
 
         public override int SetAPLCValueOn(string device)
         {
+            //LGD NG Cell test
+            /*if (device == "B1F00")
+            {
+                SetAPLCValue("D7520", 10);
+                SetAPLCValue("D7521", 11);
+            }*/
             return SetAPLCValue(device, 1);
         }
 
