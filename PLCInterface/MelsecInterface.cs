@@ -562,6 +562,12 @@ namespace PLCInterface
 
         public int SetAPLCValue(string device, int value)
         {
+            if (device == string.Empty)
+            {
+                Logger.Error("Write Device is empty");
+                return -1;
+            }
+
             int res = 0;
             object obj = new object();
 

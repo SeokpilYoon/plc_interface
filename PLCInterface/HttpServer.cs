@@ -114,12 +114,9 @@ namespace PLCInterface
                             
                             if (writeDevice.VarName == "AnomalyOnAddress" && writeDevice.ReadValue == 1)
                             {
-                                if(writeDeviceOn != string.Empty)
-                                    plc.SetAPLCValueOn(writeDeviceOn);
-                                if(writeDeviceOff != string.Empty)
-                                    plc.SetAPLCValueOff(writeDeviceOff);
-                                if (writeDeviceCapture != string.Empty)
-                                    plc.SetAPLCValueOff(writeDeviceCapture);
+                                plc.SetAPLCValueOn(writeDeviceOn);
+                                plc.SetAPLCValueOff(writeDeviceOff);
+                                plc.SetAPLCValueOff(writeDeviceCapture);
                                 if ((ConfigurationManager.AppSettings["AnomalyAutoOff"] ?? string.Empty).ToUpper().Equals("TRUE"))
                                 {
                                     Thread.Sleep(500);
@@ -128,12 +125,9 @@ namespace PLCInterface
                             }
                             else if (writeDevice.VarName == "AnomalyOffAddress" && writeDevice.ReadValue == 1)
                             {
-                                if (writeDeviceOn != string.Empty)
-                                    plc.SetAPLCValueOff(writeDeviceOn);
-                                if (writeDeviceOff != string.Empty)
-                                    plc.SetAPLCValueOn(writeDeviceOff);
-                                if (writeDeviceCapture != string.Empty)
-                                    plc.SetAPLCValueOff(writeDeviceCapture);
+                                plc.SetAPLCValueOff(writeDeviceOn);
+                                plc.SetAPLCValueOn(writeDeviceOff);
+                                plc.SetAPLCValueOff(writeDeviceCapture);
                                 if ((ConfigurationManager.AppSettings["AnomalyAutoOff"] ?? string.Empty).ToUpper().Equals("TRUE"))
                                 {
                                     Thread.Sleep(500);
@@ -142,8 +136,7 @@ namespace PLCInterface
                             }
                             else if (writeDevice.VarName == "CaptureCompleteAddress" && writeDevice.ReadValue == 1)
                             {
-                                if (writeDeviceCapture != string.Empty)
-                                    plc.SetAPLCValueOn(writeDeviceCapture);
+                                plc.SetAPLCValueOn(writeDeviceCapture);
                             }
                         }
                         catch (Exception ex)
