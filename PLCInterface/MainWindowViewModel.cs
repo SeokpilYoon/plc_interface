@@ -26,7 +26,7 @@ namespace PLCInterface
 
     class MainWindowViewModel : ViewModelBase
     {
-        private static string ProgramVersion { get; set; } = "0.6.4";
+        private static string ProgramVersion { get; set; } = "0.6.5";
 
         //MelsecInterface melsec;
         CommonInterface plc;
@@ -210,9 +210,14 @@ namespace PLCInterface
                 AutoReset = true,
                 Enabled = false
             };
-            PlcAliveTimer.Elapsed += new ElapsedEventHandler(WriteAlive);
 
-            AliveDevice = ConfigurationManager.AppSettings["AliveAddress"] ?? string.Empty;
+            if ((ConfigurationManager.AppSettings["UseAlive"] ?? string.Empty).ToUpper().Equals("TRUE"))
+            {
+                PlcAliveTimer.Elapsed += new ElapsedEventHandler(WriteAlive);
+                AliveDevice = ConfigurationManager.AppSettings["AliveAddress"] ?? string.Empty;
+            }
+            else
+                AliveDevice = string.Empty;
 
             var httpServer = new HttpServer();
             Task.Run(() => httpServer.ActivateHttpService());
