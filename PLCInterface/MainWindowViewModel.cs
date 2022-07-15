@@ -22,11 +22,13 @@ namespace PLCInterface
         public abstract string ReadPlcValues();
         public abstract int SetAPLCValueOn(string device);
         public abstract int SetAPLCValueOff(string device);
+        public abstract int WriteToPLCRandomString(string device, string text);
+        public abstract string ReadFromPLCRandomString(string device, int size);
     }
 
     class MainWindowViewModel : ViewModelBase
     {
-        private static string ProgramVersion { get; set; } = "0.6.5";
+        private static string ProgramVersion { get; set; } = "0.6.6";	// ESMI
 
         //MelsecInterface melsec;
         CommonInterface plc;
@@ -211,7 +213,8 @@ namespace PLCInterface
                 Enabled = false
             };
 
-            if ((ConfigurationManager.AppSettings["UseAlive"] ?? string.Empty).ToUpper().Equals("TRUE"))
+            if (((ConfigurationManager.AppSettings["UseAlive"] ?? string.Empty).ToUpper().Equals("TRUE"))
+                && ((ConfigurationManager.AppSettings["UseUIAlive"] ?? "FALSE").ToUpper().Equals("FALSE")))
             {
                 PlcAliveTimer.Elapsed += new ElapsedEventHandler(WriteAlive);
                 AliveDevice = ConfigurationManager.AppSettings["AliveAddress"] ?? string.Empty;
@@ -261,7 +264,8 @@ namespace PLCInterface
                 StartPressedColor = "gray";
                 StopPressedColor = "greenyellow";
                 PlcStatusColor = "yellow";
-                for (int i = 0; i < 4; i++)
+                int NumChannel = Convert.ToInt32(ConfigurationManager.AppSettings["NumChannel"] ?? "1");
+                for (int i = 0; i < NumChannel; i++)
                     UiWebStatusColor[i] = "yellow";
             }
             catch (Exception ex)
@@ -299,38 +303,34 @@ namespace PLCInterface
                 PlcInterfaceTimer.Enabled = false;
                 InfoMessage = plc.ReadPlcValues();
 
+                int NumChannel = Convert.ToInt32(ConfigurationManager.AppSettings["NumChannel"] ?? "1");
+
+                if (NumChannel >= 4)
+                {
+                    if (HttpMessage.IsSuccessToSend4)
+                        UiWebStatusColor[3] = "greenyellow";
+                    else
+                        UiWebStatusColor[3] = "red";
+                }
+                if (NumChannel >= 3)
+                {
+                    if (HttpMessage.IsSuccessToSend3)
+                        UiWebStatusColor[2] = "greenyellow";
+                    else
+                        UiWebStatusColor[2] = "red";
+                }
+                if (NumChannel >= 2)
+                {
+                    if (HttpMessage.IsSuccessToSend2)
+                        UiWebStatusColor[1] = "greenyellow";
+                    else
+                        UiWebStatusColor[1] = "red";
+                }
                 if (HttpMessage.IsSuccessToSend1)
-                {
                     UiWebStatusColor[0] = "greenyellow";
-                }
                 else
-                {
                     UiWebStatusColor[0] = "red";
-                }
-                if (HttpMessage.IsSuccessToSend2)
-                {
-                    UiWebStatusColor[1] = "greenyellow";
-                }
-                else
-                {
-                    UiWebStatusColor[1] = "red";
-                }
-                if (HttpMessage.IsSuccessToSend3)
-                {
-                    UiWebStatusColor[2] = "greenyellow";
-                }
-                else
-                {
-                    UiWebStatusColor[2] = "red";
-                }
-                if (HttpMessage.IsSuccessToSend4)
-                {
-                    UiWebStatusColor[3] = "greenyellow";
-                }
-                else
-                {
-                    UiWebStatusColor[3] = "red";
-                }
+                
                 PlcInterfaceTimer.Interval = Convert.ToInt32(ConfigurationManager.AppSettings["PlcReadInterval"] ?? "100"); // 0.5.2
             }
             catch (Exception ex)
@@ -352,16 +352,21 @@ namespace PLCInterface
                 if (AliveDevice != string.Empty)
                 {
                     int res;
-                    if (AliveOn == true)
+                    if ((ConfigurationManager.AppSettings["AliveToggle"] ?? string.Empty).ToUpper().Equals("TRUE"))
                     {
-                        res = plc.SetAPLCValueOff(AliveDevice);
-                        AliveOn = false;
+                        if (AliveOn == true)
+                        {
+                            res = plc.SetAPLCValueOff(AliveDevice);
+                            AliveOn = false;
+                        }
+                        else
+                        {
+                            res = plc.SetAPLCValueOn(AliveDevice);
+                            AliveOn = true;
+                        }
                     }
                     else
-                    {
                         res = plc.SetAPLCValueOn(AliveDevice);
-                        AliveOn = true;
-                    }
                 }
                 
                 PlcAliveTimer.Interval = Convert.ToInt32(ConfigurationManager.AppSettings["PlcAliveInterval"] ?? "2000"); // 0.5.2

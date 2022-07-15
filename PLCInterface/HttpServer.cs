@@ -35,18 +35,24 @@ namespace PLCInterface
         /// </summary>
         public void ActivateHttpService()
         {
-
-            #region HttpListenerBased
-            listener = new HttpListener();
-            listener.Prefixes.Add(bindingAddress);
-            listener.Start();
-
-            listenThread = new Thread(new ThreadStart(ListenHttpRequest))
+            try
             {
-                IsBackground = true
-            };
-            listenThread.Start();
-            #endregion HttpListenerBased
+                #region HttpListenerBased
+                listener = new HttpListener();
+                listener.Prefixes.Add(bindingAddress);
+                listener.Start();
+
+                listenThread = new Thread(new ThreadStart(ListenHttpRequest))
+                {
+                    IsBackground = true
+                };
+                listenThread.Start();
+                #endregion HttpListenerBased
+            }
+            catch (Exception ex)
+            {
+                Logger.Error($"{ex.Message}\r\n{ex.StackTrace}");
+            }
 
             #region SocketBased
 
@@ -104,6 +110,11 @@ namespace PLCInterface
                             string writeDeviceOn = ConfigurationManager.AppSettings["AnomalyOnAddress"] ?? string.Empty;
                             string writeDeviceOff = ConfigurationManager.AppSettings["AnomalyOffAddress"] ?? string.Empty;
                             string writeDeviceCapture = ConfigurationManager.AppSettings["CaptureCompleteAddress"] ?? string.Empty;
+                            string writeDeviceBusy = ConfigurationManager.AppSettings["BusyAddress"] ?? string.Empty;
+                            string writeDeviceModelChanged = ConfigurationManager.AppSettings["ESMIModelChangeCompleteAddress"] ?? string.Empty;
+                            string writeDeviceError = ConfigurationManager.AppSettings["ErrorAddress"] ?? string.Empty;
+                            string writeDeviceDetectReady = ConfigurationManager.AppSettings["DetectReadyAddress"] ?? string.Empty;
+                            string writeDeviceAlive = ConfigurationManager.AppSettings["AliveAddress"] ?? string.Empty;
 
                             writeDevice = JsonConvert.DeserializeObject<PlcVariable>(jsonText);
                             if (writeDevice.ChannelNo > 1)
@@ -111,32 +122,90 @@ namespace PLCInterface
                                 writeDeviceOn = ConfigurationManager.AppSettings[$"AnomalyOnAddress{writeDevice.ChannelNo}"] ?? string.Empty;
                                 writeDeviceOff = ConfigurationManager.AppSettings[$"AnomalyOffAddress{writeDevice.ChannelNo}"] ?? string.Empty;
                             }
-                            
-                            if (writeDevice.VarName == "AnomalyOnAddress" && writeDevice.ReadValue == 1)
+
+                            if (writeDevice.VarName == "AnomalyOnAddress")
                             {
-                                plc.SetAPLCValueOn(writeDeviceOn);
-                                plc.SetAPLCValueOff(writeDeviceOff);
-                                plc.SetAPLCValueOff(writeDeviceCapture);
-                                if ((ConfigurationManager.AppSettings["AnomalyAutoOff"] ?? string.Empty).ToUpper().Equals("TRUE"))
+                                if (writeDevice.ReadValue == 1)
                                 {
-                                    Thread.Sleep(500);
+                                    if ((ConfigurationManager.AppSettings["UseBusy"] ?? string.Empty).ToUpper().Equals("TRUE"))
+                                        plc.SetAPLCValueOff(writeDeviceBusy);
+                                    plc.SetAPLCValueOn(writeDeviceOn);
+                                    plc.SetAPLCValueOff(writeDeviceOff);
+                                    plc.SetAPLCValueOff(writeDeviceCapture);
+                                    if ((ConfigurationManager.AppSettings["AnomalyAutoOff"] ?? string.Empty).ToUpper().Equals("TRUE"))
+                                    {
+                                        Thread.Sleep(500);
+                                        plc.SetAPLCValueOff(writeDeviceOn);
+                                    }
+                                }
+                                else if (writeDevice.ReadValue == 0)
+                                {
                                     plc.SetAPLCValueOff(writeDeviceOn);
                                 }
                             }
-                            else if (writeDevice.VarName == "AnomalyOffAddress" && writeDevice.ReadValue == 1)
+                            else if (writeDevice.VarName == "AnomalyOffAddress")
                             {
-                                plc.SetAPLCValueOff(writeDeviceOn);
-                                plc.SetAPLCValueOn(writeDeviceOff);
-                                plc.SetAPLCValueOff(writeDeviceCapture);
-                                if ((ConfigurationManager.AppSettings["AnomalyAutoOff"] ?? string.Empty).ToUpper().Equals("TRUE"))
+                                if (writeDevice.ReadValue == 1)
                                 {
-                                    Thread.Sleep(500);
+                                    if ((ConfigurationManager.AppSettings["UseBusy"] ?? string.Empty).ToUpper().Equals("TRUE"))
+                                        plc.SetAPLCValueOff(writeDeviceBusy);
+                                    plc.SetAPLCValueOff(writeDeviceOn);
+                                    plc.SetAPLCValueOn(writeDeviceOff);
+                                    plc.SetAPLCValueOff(writeDeviceCapture);
+                                    if ((ConfigurationManager.AppSettings["AnomalyAutoOff"] ?? string.Empty).ToUpper().Equals("TRUE"))
+                                    {
+                                        Thread.Sleep(500);
+                                        plc.SetAPLCValueOff(writeDeviceOff);
+                                    }
+                                }
+                                else if (writeDevice.ReadValue == 0)
+                                {
                                     plc.SetAPLCValueOff(writeDeviceOff);
                                 }
+                            }
+                            else if (writeDevice.VarName == "AlarmOff")
+                            {
+                                plc.SetAPLCValueOff(writeDeviceOn);
+                                plc.SetAPLCValueOff(writeDeviceOff);
                             }
                             else if (writeDevice.VarName == "CaptureCompleteAddress" && writeDevice.ReadValue == 1)
                             {
                                 plc.SetAPLCValueOn(writeDeviceCapture);
+                            }
+                            else if (writeDevice.VarName == "BusyAddress")
+                            {
+                                if (writeDevice.ReadValue == 1)
+                                    plc.SetAPLCValueOn(writeDeviceBusy);
+                                else if (writeDevice.ReadValue == 0)
+                                    plc.SetAPLCValueOff(writeDeviceBusy);
+                            }
+                            else if (writeDevice.VarName == "ESMIModelChangeCompleteAddress")
+                            {
+                                if (writeDevice.ReadValue == 1)
+                                    plc.SetAPLCValueOn(writeDeviceModelChanged);
+                                else if (writeDevice.ReadValue == 0)
+                                    plc.SetAPLCValueOff(writeDeviceModelChanged);
+                            }
+                            else if (writeDevice.VarName == "ErrorAddress")
+                            {
+                                if (writeDevice.ReadValue == 1)
+                                    plc.SetAPLCValueOn(writeDeviceError);
+                                else if (writeDevice.ReadValue == 0)
+                                    plc.SetAPLCValueOff(writeDeviceError);
+                            }
+                            else if (writeDevice.VarName == "DetectReadyAddress")
+                            {
+                                if(writeDevice.ReadValue == 1)
+                                    plc.SetAPLCValueOn(writeDeviceDetectReady);
+                                else if (writeDevice.ReadValue == 0)
+                                    plc.SetAPLCValueOff(writeDeviceDetectReady);
+                            }
+                            else if (writeDevice.VarName == "AliveAddress")
+                            {
+                                if (writeDevice.ReadValue == 1)
+                                    plc.SetAPLCValueOn(writeDeviceAlive);
+                                else if (writeDevice.ReadValue == 0)
+                                    plc.SetAPLCValueOff(writeDeviceAlive);
                             }
                         }
                         catch (Exception ex)

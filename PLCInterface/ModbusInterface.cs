@@ -367,5 +367,17 @@ namespace PLCInterface
             await Task.Delay(10);
             return returnVal1 + returnVal2;
         }
+
+        // SPY TEST
+        public override int WriteToPLCRandomString(string device, string text)
+        {
+            int dummy = 0;
+            return dummy;
+        }
+        public override string ReadFromPLCRandomString(string device, int size)
+        {
+            string dummy = "";
+            return dummy;
+        }
     }
 }

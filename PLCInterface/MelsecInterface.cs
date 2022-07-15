@@ -46,6 +46,7 @@ namespace PLCInterface
         private string PreviousRead { get; set; } = string.Empty;
 
         public int NumChannel { get; set; } = 1;
+        private static bool ModelChanging { get; set; } = false;
 
         public MelsecInterface()
         {
@@ -88,8 +89,12 @@ namespace PLCInterface
                     CheckPlcAddress(interfaceIndex++, "ReadyAddress", true, j+1);
                     CheckPlcAddress(interfaceIndex++, "Word1ModelAddress", true, j + 1);
                     CheckPlcAddress(interfaceIndex++, "Word2ModelAddress", true, j + 1);
+                    CheckPlcAddress(interfaceIndex++, "ESMIModelChangeRequestAddress", true, j + 1);
+                    CheckPlcAddress(interfaceIndex++, "ModeSelectAddress", true, j + 1);
+                    CheckPlcAddress(interfaceIndex++, "CommErrorAddress", true, j + 1);
+                    CheckPlcAddress(interfaceIndex++, "ESMIModelNumberAddress", true, j + 1);
+                    CheckPlcAddress(interfaceIndex++, "NestNumberAddress", true, j + 1);
                 }
-
                 #endregion Read Configuration
 
                 #region Write Configuration
@@ -101,6 +106,11 @@ namespace PLCInterface
                 CheckPlcAddress(interfaceIndex++, "AnomalyOffAddress", false);
                 CheckPlcAddress(interfaceIndex++, "AliveAddress", false);
                 CheckPlcAddress(interfaceIndex++, "CaptureCompleteAddress", false);
+                CheckPlcAddress(interfaceIndex++, "BusyAddress", false);
+                CheckPlcAddress(interfaceIndex++, "ESMIModelChangeCompleteAddress", false);
+                CheckPlcAddress(interfaceIndex++, "ErrorAddress", false);
+                CheckPlcAddress(interfaceIndex++, "DetectReadyAddress", false);
+                CheckPlcAddress(interfaceIndex++, "AliveAddress", false);                
 
                 #endregion Write Configuration
 
@@ -682,6 +692,165 @@ namespace PLCInterface
             Logger.Info($"Send Anomaly to device:{device1}, Release to device:{device2}, result:{returnVal1 + returnVal2}");
             await Task.Delay(10);
             return returnVal1 + returnVal2;
+        }
+
+        // SPY TEST
+        public override int WriteToPLCRandomString(string device, string text)
+        {
+            int res = 0;
+            try
+            {
+                WriteDeviceBlock(device, text);
+            }
+            catch (Exception ex)
+            {
+                Logger.Error($"Exception on {System.Reflection.MethodBase.GetCurrentMethod().Name} >>> {ex.Message}\r\n{ex.StackTrace}");
+                res = -1;
+            }
+            finally { }
+
+            return res;
+        }
+        public override string ReadFromPLCRandomString(string device, int size)
+        {
+            string sRead = "";
+            try
+            {
+                lock (aut)
+                {
+                    //블럭으로 읽을때 
+                    ReadDeviceBlock(device, size, out sRead);
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.Error($"Exception on {System.Reflection.MethodBase.GetCurrentMethod().Name} >>> {ex.Message}\r\n{ex.StackTrace}");
+            }
+            finally { }
+            return sRead;
+        }
+
+        private Object thisLock = new Object();
+        short[] sInt = new short[100];
+
+        public bool WriteDeviceBlock(string _sAdd, string _str)
+        {
+            if (_str == "")
+            {
+                sInt = new short[10];
+                Array.Clear(sInt, 0, sInt.Length);
+                bool bCheck1 = WriteDeviceBlock2(_sAdd, sInt.Length, ref sInt[0]);
+                return bCheck1;
+            }
+            string str = _str;
+            string[] str_temp;
+
+            if (str.Length % 2 == 0)
+            {
+                str_temp = new string[str.Length / 2];
+                sInt = new short[str_temp.Length];
+
+                for (int i = 0; i < str.Length / 2; i++)
+                {
+                    str_temp[i] = str.Substring(i * 2, 2);
+                }
+
+                for (int i = 0; i < str_temp.Length; i++)
+                {
+                    byte[] bytes = Encoding.ASCII.GetBytes(str_temp[i]);
+                    short sh = BitConverter.ToInt16(bytes, 0);
+                    sInt[i] = sh;
+                }
+            }
+            else
+            {
+                str_temp = new string[(str.Length / 2) + 1];
+                sInt = new short[str_temp.Length];
+
+                for (int i = 0; i < str.Length / 2 + 1; i++)
+                {
+                    if (i < (str.Length - 1) / 2)
+                        str_temp[i] = str.Substring(i * 2, 2);
+                    else
+                        str_temp[i] = str.Substring(i * 2, 1);
+                }
+
+                for (int i = 0; i < str_temp.Length; i++)
+                {
+                    if (i < str_temp.Length - 1)
+                    {
+                        byte[] bytes = Encoding.ASCII.GetBytes(str_temp[i]);
+                        short sh = BitConverter.ToInt16(bytes, 0);
+                        sInt[i] = sh;
+                    }
+                    else
+                    {
+                        char data = Convert.ToChar(str_temp[i].Substring(0, 1));
+                        sInt[i] = (short)data;
+                    }
+                }
+            }
+
+            bool bCheck2 = WriteDeviceBlock2(_sAdd, sInt.Length, ref sInt[0]);
+            return bCheck2;
+        }
+        public bool WriteDeviceBlock2(string szDevice, int iSize, ref short iData)
+        {
+            int iRst = -1;
+
+            lock (thisLock)
+            {
+                try
+                {
+                    iRst = aut.WriteDeviceBlock2(szDevice, iSize, ref iData);
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show(ex.Message);
+                }
+            }
+            if (iRst == 0) return true;
+            return false;
+        }
+        public bool ReadDeviceBlock(string _sAdd, int size, out string _str)
+        {
+            sInt = new short[size];
+            Array.Clear(sInt, 0, sInt.Length);
+            bool bCheck = ReadDeviceBlock2(_sAdd, sInt.Length, out sInt[0]);
+
+            _str = "";
+            if (bCheck)
+            {
+                for (int i = 0; i < sInt.Length; i++)
+                {
+                    byte[] bytes = BitConverter.GetBytes(sInt[i]);
+                    _str += Encoding.Default.GetString(bytes);
+                }
+            }
+
+            return bCheck;
+        }
+        public bool ReadDeviceBlock2(string szDevice, int iSize, out short lplData)
+        {
+            lplData = 0;
+
+
+            int iRst = -1;
+
+            lock (thisLock)
+            {
+                try
+                {
+                    iRst = aut.ReadDeviceBlock2(szDevice, iSize, out lplData);
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show(ex.Message);
+                }
+            }
+            if (iRst == 0) return true;
+
+            return false;
         }
     }
 }
