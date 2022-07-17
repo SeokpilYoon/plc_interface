@@ -1,13 +1,13 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Configuration;
-using System.Linq;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Timers;
 using System.Windows.Input;
 using System.Collections.ObjectModel;
+using System.IO;
+using System.Diagnostics;
+using System.Runtime.InteropServices;
 
 namespace PLCInterface
 {
@@ -28,7 +28,11 @@ namespace PLCInterface
 
     class MainWindowViewModel : ViewModelBase
     {
-        private static string ProgramVersion { get; set; } = "0.6.6";	// ESMI
+        private static string ProgramVersion { get; set; } = "0.6.7";
+
+        [DllImport("kernel32")]
+        public static extern Int32 GetCurrentProcessId();
+
 
         //MelsecInterface melsec;
         CommonInterface plc;
@@ -174,6 +178,15 @@ namespace PLCInterface
         public MainWindowViewModel()
         {
             Logger.Info($"★★★ Anomaly Detection PLC Communicator Version: [{ProgramVersion}] ★★★");
+
+            // 멀티프로그램 허용하지 않았는데, 동명의 다른 프로세스가 살아있다면 죽이고 시작함
+            //if (!GlobalInfo.MultiProgram)
+            {
+                if (IsProgramRunning())
+                {
+                    KillProgram(true);
+                }
+            }
 
             byte plcType = Convert.ToByte(ConfigurationManager.AppSettings["PlcType"] ?? "1");
             if (plcType == 1)
@@ -381,5 +394,79 @@ namespace PLCInterface
                 PlcAliveTimer.Enabled = true;
             }
         }
-    }
+
+        private bool IsProgramRunning()
+        {
+            bool isRunning = false;
+            try
+            {
+                string currentProcessName = Path.GetFileNameWithoutExtension(System.Reflection.Assembly.GetExecutingAssembly().Location);
+
+                //현재 프로세스 목록 가져오기
+                Process[] pslist = Process.GetProcesses();
+
+                string list = string.Empty;
+                int processCount = 0;
+                for (int i = 0; i < pslist.Length; i++)
+                {
+                    list = pslist[i].ProcessName;
+                    if (list.Equals(currentProcessName))
+                    {
+                        processCount++;
+                    }
+                }
+                if (processCount > 1)
+                {
+                    Logger.Info($"{currentProcessName} is already running");
+                    isRunning = true;
+                }
+                return isRunning;
+            }
+            catch (Exception ex)
+            {
+                Logger.Error($"Exception on {System.Reflection.MethodBase.GetCurrentMethod().Name} >>> {ex.Message}\r\n{ex.StackTrace}");
+                return true;
+            }
+            finally { }
+        }
+
+        private void KillProgram(bool isStart = false)
+        {
+            string currentProcessName = Path.GetFileNameWithoutExtension(System.Reflection.Assembly.GetExecutingAssembly().Location);
+
+            Process[] array = Process.GetProcessesByName(currentProcessName);
+            int thisProcessId = GetCurrentProcessId();
+            Process thisProcess = Process.GetProcessById(thisProcessId);
+
+            // 나 빼고 다 죽임
+            if (isStart)
+            {
+                if (array.Length > 0)
+                {
+                    for (int iProcess = 0; iProcess < array.Length; iProcess++)
+                    {
+                        try
+                        {
+                            if (array[iProcess].Id != thisProcessId)
+                            {
+                                Logger.Debug($"♠ PID:[{array[iProcess].Id}], {array[iProcess].ProcessName} is Dying. I am [{thisProcessId}] ♠");
+                                array[iProcess].Kill();
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            Logger.Error($"[{array.Length}] Exception on {System.Reflection.MethodBase.GetCurrentMethod().Name} >>> {ex.Message}\r\n{ex.StackTrace}");
+                        }
+                    }
+                }
+            }
+            // 나를 죽임
+            else
+            {
+                //Utility.SaveCurrentStatus(ApplicationStatus.OnDetect);
+                Logger.Info($"♥ Killing me softly with his song ♥");
+                thisProcess.Kill();
+            }
+        }
+    }    
 }

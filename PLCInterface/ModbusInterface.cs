@@ -258,7 +258,6 @@ namespace PLCInterface
                         Logger.Debug($"Modbus Read Coils Success");
                         return res;
                     }
-                    break;
                 }
                 catch (Exception ex)
                 {
