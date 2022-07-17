@@ -67,7 +67,7 @@ namespace PLCInterface
                     if (j > 0)
                     {
                         modelQty = Convert.ToInt32(ConfigurationManager.AppSettings[$"ModelQty{j + 1}"] ?? "1");
-                        deviceModel = ConfigurationManager.AppSettings["ModelStartAddress{j + 1}"] ?? string.Empty;
+                        deviceModel = ConfigurationManager.AppSettings[$"ModelStartAddress{j + 1}"] ?? string.Empty;
                     }
                     if (modelQty > 1 && deviceModel.Length > 1)
                     {
