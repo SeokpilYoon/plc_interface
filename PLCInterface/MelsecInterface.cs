@@ -110,7 +110,8 @@ namespace PLCInterface
                 CheckPlcAddress(interfaceIndex++, "ESMIModelChangeCompleteAddress", false);
                 CheckPlcAddress(interfaceIndex++, "ErrorAddress", false);
                 CheckPlcAddress(interfaceIndex++, "DetectReadyAddress", false);
-                CheckPlcAddress(interfaceIndex++, "AliveAddress", false);                
+                CheckPlcAddress(interfaceIndex++, "AliveAddress", false);
+                CheckPlcAddress(interfaceIndex++, "LearnModeAddress", false);
 
                 #endregion Write Configuration
 

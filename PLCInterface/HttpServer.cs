@@ -115,6 +115,7 @@ namespace PLCInterface
                             string writeDeviceError = ConfigurationManager.AppSettings["ErrorAddress"] ?? string.Empty;
                             string writeDeviceDetectReady = ConfigurationManager.AppSettings["DetectReadyAddress"] ?? string.Empty;
                             string writeDeviceAlive = ConfigurationManager.AppSettings["AliveAddress"] ?? string.Empty;
+                            string writeDeviceLearnMode = ConfigurationManager.AppSettings["LearnModeAddress"] ?? string.Empty;                            
 
                             writeDevice = JsonConvert.DeserializeObject<PlcVariable>(jsonText);
                             if (writeDevice.ChannelNo > 1)
@@ -206,6 +207,13 @@ namespace PLCInterface
                                     plc.SetAPLCValueOn(writeDeviceAlive);
                                 else if (writeDevice.ReadValue == 0)
                                     plc.SetAPLCValueOff(writeDeviceAlive);
+                            }
+                            else if (writeDevice.VarName == "LearnModeAddress")
+                            {
+                                if (writeDevice.ReadValue == 1)
+                                    plc.SetAPLCValueOn(writeDeviceLearnMode);
+                                else if (writeDevice.ReadValue == 0)
+                                    plc.SetAPLCValueOff(writeDeviceLearnMode);
                             }
                         }
                         catch (Exception ex)

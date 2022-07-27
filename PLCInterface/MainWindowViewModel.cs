@@ -28,7 +28,7 @@ namespace PLCInterface
 
     class MainWindowViewModel : ViewModelBase
     {
-        private static string ProgramVersion { get; set; } = "0.6.7";
+        private static string ProgramVersion { get; set; } = "0.6.8";
 
         [DllImport("kernel32")]
         public static extern Int32 GetCurrentProcessId();
