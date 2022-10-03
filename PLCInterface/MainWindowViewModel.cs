@@ -28,7 +28,7 @@ namespace PLCInterface
 
     class MainWindowViewModel : ViewModelBase
     {
-        private static string ProgramVersion { get; set; } = "0.6.8";
+        private static string ProgramVersion { get; set; } = "0.6.81"; // 81 : autorun 기능 추가
 
         [DllImport("kernel32")]
         public static extern Int32 GetCurrentProcessId();
@@ -237,6 +237,22 @@ namespace PLCInterface
 
             var httpServer = new HttpServer();
             Task.Run(() => httpServer.ActivateHttpService());
+
+
+            if ((ConfigurationManager.AppSettings["AutoRun"] ?? string.Empty).ToUpper().Equals("TRUE"))
+            {
+                try
+                {
+                    Thread.Sleep(3000);
+                    InfoMessage = plc.StartInteface();
+                    SetConnectionStatus();
+                }
+                catch (Exception ex)
+                {
+                    Logger.Error($"Exception on {System.Reflection.MethodBase.GetCurrentMethod().Name} >>> {ex.Message}\r\n{ex.StackTrace}");
+                }
+                finally { }
+            }
         }
 
         private void StartInterfaceCommandExe(object obj)
