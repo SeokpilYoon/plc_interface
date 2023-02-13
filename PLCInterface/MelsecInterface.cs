@@ -399,6 +399,11 @@ namespace PLCInterface
 
             try
             {
+                if (device == "" || device == string.Empty)
+                {
+                    Logger.Debug($"PLC Random Block Read : No Device");
+                    return res;
+                }
                 lock (aut)
                 {
                     for (int i = 0; i < RetryNumLimit; i++)
@@ -852,6 +857,11 @@ namespace PLCInterface
             if (iRst == 0) return true;
 
             return false;
+        }
+
+        public override int GetReadDevicesCount()
+        {
+            return ReadDevices.Count;
         }
     }
 }

@@ -24,11 +24,12 @@ namespace PLCInterface
         public abstract int SetAPLCValueOff(string device);
         public abstract int WriteToPLCRandomString(string device, string text);
         public abstract string ReadFromPLCRandomString(string device, int size);
+        public abstract int GetReadDevicesCount();
     }
 
     class MainWindowViewModel : ViewModelBase
     {
-        private static string ProgramVersion { get; set; } = "0.6.8";
+        private static string ProgramVersion { get; set; } = "0.6.10";
 
         [DllImport("kernel32")]
         public static extern Int32 GetCurrentProcessId();
@@ -273,6 +274,7 @@ namespace PLCInterface
                 
                 PlcInterfaceTimer.Enabled = false;
                 PlcAliveTimer.Enabled = false;
+                WriteAliveOff();
 
                 StartPressedColor = "gray";
                 StopPressedColor = "greenyellow";
@@ -298,8 +300,11 @@ namespace PLCInterface
                 PlcStatusColor = "greenyellow";
                 //StartPressedColor = "greenyellow";
                 //StopPressedColor = "gray";
-                PlcInterfaceTimer.Enabled = true;
-                PlcAliveTimer.Enabled = true;
+                if (plc.GetReadDevicesCount() > 0)
+                    PlcInterfaceTimer.Enabled = true;
+                if (((ConfigurationManager.AppSettings["UseAlive"] ?? string.Empty).ToUpper().Equals("TRUE"))
+                   && ((ConfigurationManager.AppSettings["UseUIAlive"] ?? "FALSE").ToUpper().Equals("FALSE")))
+                    PlcAliveTimer.Enabled = true;
             }
             else
             {
@@ -392,6 +397,23 @@ namespace PLCInterface
             finally
             {
                 PlcAliveTimer.Enabled = true;
+            }
+        }
+
+        private void WriteAliveOff()
+        {
+            try
+            {
+                if (AliveDevice != string.Empty)
+                {
+                    int res = plc.SetAPLCValueOff(AliveDevice);
+                    AliveOn = false;
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.Error($"Exception on {System.Reflection.MethodBase.GetCurrentMethod().Name} >>> {ex.Message}\r\n{ex.StackTrace}");
+                InfoMessage = "Error while reading & operating PLC values";
             }
         }
 
