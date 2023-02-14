@@ -29,7 +29,7 @@ namespace PLCInterface
 
     class MainWindowViewModel : ViewModelBase
     {
-        private static string ProgramVersion { get; set; } = "0.6.10";
+        private static string ProgramVersion { get; set; } = "0.6.11";
 
         [DllImport("kernel32")]
         public static extern Int32 GetCurrentProcessId();
@@ -302,6 +302,12 @@ namespace PLCInterface
                 //StopPressedColor = "gray";
                 if (plc.GetReadDevicesCount() > 0)
                     PlcInterfaceTimer.Enabled = true;
+                else
+                {
+                    int NumChannel = Convert.ToInt32(ConfigurationManager.AppSettings["NumChannel"] ?? "1");
+                    for (int i=0; i< NumChannel; i++)
+                        UiWebStatusColor[i] = "greenyellow";
+                }
                 if (((ConfigurationManager.AppSettings["UseAlive"] ?? string.Empty).ToUpper().Equals("TRUE"))
                    && ((ConfigurationManager.AppSettings["UseUIAlive"] ?? "FALSE").ToUpper().Equals("FALSE")))
                     PlcAliveTimer.Enabled = true;
