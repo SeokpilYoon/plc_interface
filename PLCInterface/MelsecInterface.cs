@@ -155,7 +155,7 @@ namespace PLCInterface
                 }
             }
         }
-        public override string StartInteface()
+        public override string StartInterface()
         {
             string returnMessage = string.Empty;
             try

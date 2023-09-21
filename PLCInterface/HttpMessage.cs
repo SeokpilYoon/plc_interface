@@ -15,6 +15,8 @@ namespace PLCInterface
         public static int UiHttpPort2 { get; set; } = Convert.ToInt32(ConfigurationManager.AppSettings["HttpSendPort2"] ?? "6162");
         public static int UiHttpPort3 { get; set; } = Convert.ToInt32(ConfigurationManager.AppSettings["HttpSendPort3"] ?? "6163");
         public static int UiHttpPort4 { get; set; } = Convert.ToInt32(ConfigurationManager.AppSettings["HttpSendPort4"] ?? "6164");
+        public static int UiHttpPort5 { get; set; } = Convert.ToInt32(ConfigurationManager.AppSettings["HttpSendPort5"] ?? "6165");
+        public static int UiHttpPort6 { get; set; } = Convert.ToInt32(ConfigurationManager.AppSettings["HttpSendPort6"] ?? "6166");
         public static bool IsSuccessToSend1 { get; set; } = false;
         public static bool IsSuccessToSend2 { get; set; } = false;
         public static bool IsSuccessToSend3 { get; set; } = false;
@@ -33,6 +35,10 @@ namespace PLCInterface
                     nPort = UiHttpPort3;
                 else if (ch == 4)
                     nPort = UiHttpPort4;
+                else if (ch == 5)
+                    nPort = UiHttpPort5;
+                else if (ch == 6)
+                    nPort = UiHttpPort6;
 
                 string url = $"http://localhost:{nPort}/";
                 Logger.Info($"Http Send url : {url}");

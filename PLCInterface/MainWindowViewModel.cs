@@ -16,7 +16,7 @@ namespace PLCInterface
         public bool IsConfigurationSuccess { get; set; } = false;
         public bool IsAlive { get; set; } = false;
 
-        public abstract string StartInteface();
+        public abstract string StartInterface();
         public abstract int OpenConnection();
         public abstract int CloseConnection();
         public abstract string ReadPlcValues();
@@ -29,7 +29,7 @@ namespace PLCInterface
 
     class MainWindowViewModel : ViewModelBase
     {
-        private static string ProgramVersion { get; set; } = "0.6.11";
+        private static string ProgramVersion { get; set; } = "0.7.1";
 
         [DllImport("kernel32")]
         public static extern Int32 GetCurrentProcessId();
@@ -194,6 +194,10 @@ namespace PLCInterface
                 plc = new MelsecInterface();
             else if(plcType == 2)
                 plc = new ModbusInterface();
+            else if (plcType == 3)
+                plc = new AdvantechDAQInterface();
+            else if (plcType == 4)
+                plc = new ADLinkDIOInterface(); // LGD에 3으로 배포되었으나 4로 변경
             else
                 plc = new MelsecInterface();
 
@@ -244,7 +248,7 @@ namespace PLCInterface
         {
             try
             {
-                InfoMessage = plc.StartInteface();
+                InfoMessage = plc.StartInterface();
                 SetConnectionStatus();
             }
             catch(Exception ex)

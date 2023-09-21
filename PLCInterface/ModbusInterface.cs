@@ -28,7 +28,6 @@ namespace PLCInterface
 
         int[] readValues;
 
-        public string DeviceRandomToWrite { get; set; } = string.Empty;
 
         List<PlcVariable> ReadDevices;
         List<PlcVariable> WriteDevices;
@@ -102,7 +101,7 @@ namespace PLCInterface
             finally { }
         }
 
-        public override string StartInteface()
+        public override string StartInterface()
         {
             string returnMessage = string.Empty;
             try
@@ -302,7 +301,7 @@ namespace PLCInterface
                 {
                     Logger.Error($"Exception on {System.Reflection.MethodBase.GetCurrentMethod().Name} >>> {ex.Message}\r\n{ex.StackTrace}");
                     res = -1;
-                    StartInteface();
+                    StartInterface();
                 }
                 finally { }
             }
@@ -336,7 +335,7 @@ namespace PLCInterface
                 {
                     Logger.Error($"Exception on {System.Reflection.MethodBase.GetCurrentMethod().Name} >>> {ex.Message}\r\n{ex.StackTrace}");
                     res = -1;
-                    StartInteface();    // write coil 디바이스가 계속 연결이 끊겨 exception 발생하여 connect+retry 추가함
+                    StartInterface();    // write coil 디바이스가 계속 연결이 끊겨 exception 발생하여 connect+retry 추가함
                 }
                 finally { }
             }
