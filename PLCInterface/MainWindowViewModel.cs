@@ -207,9 +207,9 @@ namespace PLCInterface
             UiWebStatusColor = new ObservableCollection<string>();
 
             PlcStatusColor = "gray";
-            for (int i=0; i<4; i++)
+            for (int i=0; i<6; i++)
                 UiWebStatusColor.Add("gray");
-             StartPressedColor = "gray";
+            StartPressedColor = "gray";
             StopPressedColor = "gray";
             InfoMessage = $"Configuration Setting Success: {plc.IsConfigurationSuccess}";
 
@@ -333,6 +333,20 @@ namespace PLCInterface
 
                 int NumChannel = Convert.ToInt32(ConfigurationManager.AppSettings["NumChannel"] ?? "1");
 
+                if (NumChannel >= 6)
+                {
+                    if (HttpMessage.IsSuccessToSend6)
+                        UiWebStatusColor[5] = "greenyellow";
+                    else
+                        UiWebStatusColor[5] = "red";
+                }
+                if (NumChannel >= 5)
+                {
+                    if (HttpMessage.IsSuccessToSend5)
+                        UiWebStatusColor[4] = "greenyellow";
+                    else
+                        UiWebStatusColor[4] = "red";
+                }
                 if (NumChannel >= 4)
                 {
                     if (HttpMessage.IsSuccessToSend4)

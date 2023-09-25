@@ -5,7 +5,7 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:PLCInterface"
         mc:Ignorable="d"
-        Title="PLC Interface" Width="270" Height="250" >
+        Title="PLC Interface" Width="280" Height="250" >
     <Window.DataContext>
         <local:MainWindowViewModel/>
     </Window.DataContext>
@@ -23,20 +23,22 @@
             <Button x:Name="button1" Content="Stop Service" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="135,64,0,0" Width="80" Command="{Binding StopInterfaceCommand}" Background="{Binding StopPressedColor}"/>
         </Grid>
         <Grid Grid.Row="1">
-            <TextBlock HorizontalAlignment="Left" VerticalAlignment="Top" Margin="30,8,0,0" Width ="200" Text="PLC Connection Status" Foreground="white" />
-            <Rectangle HorizontalAlignment="Left" VerticalAlignment="Top" Margin="180,8,0,0" Width="20" Height="20" Stroke="Black" Fill="{Binding PlcStatusColor}" />
-            <TextBlock HorizontalAlignment="Left" VerticalAlignment="Top" Margin="30,35,0,0" Width ="200" Text="UI Connection Status" Foreground="white" />
-            <Rectangle HorizontalAlignment="Left" VerticalAlignment="Top" Margin="180,35,0,0" Width="20" Height="20" Stroke="Black" Fill="{Binding UiWebStatusColor[0]}" />
-            <Rectangle HorizontalAlignment="Left" VerticalAlignment="Top" Margin="200,35,0,0" Width="20" Height="20" Stroke="Black" Fill="{Binding UiWebStatusColor[1]}" />
-            <Rectangle HorizontalAlignment="Left" VerticalAlignment="Top" Margin="220,35,0,0" Width="20" Height="20" Stroke="Black" Fill="{Binding UiWebStatusColor[2]}" />
-            <Rectangle HorizontalAlignment="Left" VerticalAlignment="Top" Margin="240,35,0,0" Width="20" Height="20" Stroke="Black" Fill="{Binding UiWebStatusColor[3]}" />
+            <TextBlock HorizontalAlignment="Left" VerticalAlignment="Top" Margin="10,8,0,0" Width ="200" Text="PLC Connection Status" Foreground="white" />
+            <Rectangle HorizontalAlignment="Left" VerticalAlignment="Top" Margin="140,8,0,0" Width="20" Height="20" Stroke="Black" Fill="{Binding PlcStatusColor}" />
+            <TextBlock HorizontalAlignment="Left" VerticalAlignment="Top" Margin="10,35,0,0" Width ="200" Text="UI Connection Status" Foreground="white" />
+            <Rectangle HorizontalAlignment="Left" VerticalAlignment="Top" Margin="140,35,0,0" Width="20" Height="20" Stroke="Black" Fill="{Binding UiWebStatusColor[0]}" />
+            <Rectangle HorizontalAlignment="Left" VerticalAlignment="Top" Margin="160,35,0,0" Width="20" Height="20" Stroke="Black" Fill="{Binding UiWebStatusColor[1]}" />
+            <Rectangle HorizontalAlignment="Left" VerticalAlignment="Top" Margin="180,35,0,0" Width="20" Height="20" Stroke="Black" Fill="{Binding UiWebStatusColor[2]}" />
+            <Rectangle HorizontalAlignment="Left" VerticalAlignment="Top" Margin="200,35,0,0" Width="20" Height="20" Stroke="Black" Fill="{Binding UiWebStatusColor[3]}" />
+            <Rectangle HorizontalAlignment="Left" VerticalAlignment="Top" Margin="220,35,0,0" Width="20" Height="20" Stroke="Black" Fill="{Binding UiWebStatusColor[4]}" />
+            <Rectangle HorizontalAlignment="Left" VerticalAlignment="Top" Margin="240,35,0,0" Width="20" Height="20" Stroke="Black" Fill="{Binding UiWebStatusColor[5]}" />
         </Grid>
         <Grid Grid.Row="2">
             <Grid.RowDefinitions>
                 <RowDefinition Height="0*"/>
                 <RowDefinition/>
             </Grid.RowDefinitions>
-            <TextBlock HorizontalAlignment="Left" VerticalAlignment="Top" Margin="30,6,0,0" Width ="200" Text="{Binding InfoMessage}" Foreground="white" Grid.Row="1" Height="16" />
+            <TextBlock HorizontalAlignment="Left" VerticalAlignment="Top" Margin="10,6,0,0" Width ="200" Text="{Binding InfoMessage}" Foreground="white" Grid.Row="1" Height="16" />
         </Grid>
     </Grid>
 </Window>

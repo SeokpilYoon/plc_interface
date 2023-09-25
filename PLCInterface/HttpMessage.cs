@@ -21,6 +21,8 @@ namespace PLCInterface
         public static bool IsSuccessToSend2 { get; set; } = false;
         public static bool IsSuccessToSend3 { get; set; } = false;
         public static bool IsSuccessToSend4 { get; set; } = false;
+        public static bool IsSuccessToSend5 { get; set; } = false;
+        public static bool IsSuccessToSend6 { get; set; } = false;
 
         public static void SendHttpMessage(string messageBodyJson, int ch=1)
         {
@@ -66,6 +68,10 @@ namespace PLCInterface
                     IsSuccessToSend3 = true;
                 else if (ch == 4)
                     IsSuccessToSend4 = true;
+                else if (ch == 5)
+                    IsSuccessToSend5 = true;
+                else if (ch == 6)
+                    IsSuccessToSend6 = true;
                 httpWebRequest.Abort();
                 httpResponse.Close();
             }
@@ -80,6 +86,10 @@ namespace PLCInterface
                     IsSuccessToSend3 = false;
                 else if (ch == 4)
                     IsSuccessToSend4 = false;
+                else if (ch == 5)
+                    IsSuccessToSend5 = false;
+                else if (ch == 6)
+                    IsSuccessToSend6 = false;
             }
             finally { }
         }
