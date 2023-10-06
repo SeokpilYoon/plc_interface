@@ -21,6 +21,7 @@
             <GroupBox x:Name="groupBox" Header="Command" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="15,39,0,0"  Width="220" Height="60" Foreground="white" />
             <Button x:Name="button" Content="Start Service" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="35,64,0,0"  Width="80" Command="{Binding StartInterfaceCommand}" Background="{Binding StartPressedColor}"/>
             <Button x:Name="button1" Content="Stop Service" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="135,64,0,0" Width="80" Command="{Binding StopInterfaceCommand}" Background="{Binding StopPressedColor}"/>
+            <Button x:Name="button2" Content="" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="240,64,0,0" Width="20" Command="{Binding UsbTesterButtonCommand}" Background="DarkSeaGreen" Visibility="{Binding UsbTesterButtonVisible}"/>
         </Grid>
         <Grid Grid.Row="1">
             <TextBlock HorizontalAlignment="Left" VerticalAlignment="Top" Margin="10,8,0,0" Width ="200" Text="PLC Connection Status" Foreground="white" />

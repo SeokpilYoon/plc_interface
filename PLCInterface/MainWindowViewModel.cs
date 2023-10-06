@@ -8,6 +8,10 @@ using System.Collections.ObjectModel;
 using System.IO;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
+using System.Text;
+using System.Windows.Controls;
+using ChunilElectric;
+using System.Windows;
 
 namespace PLCInterface
 {
@@ -38,6 +42,7 @@ namespace PLCInterface
         CommonInterface plc;
         private System.Timers.Timer PlcInterfaceTimer = null;
         private System.Timers.Timer PlcAliveTimer = null;
+        bool UseUsbWarningLight = false;
 
         private string plcStatusColor = string.Empty;
         public string PlcStatusColor
@@ -134,6 +139,19 @@ namespace PLCInterface
                 stopInterfaceCommand = value;
             }
         }
+        
+        private ICommand usbTesterButtonCommand;
+        public ICommand UsbTesterButtonCommand
+        {
+            get
+            {
+                return usbTesterButtonCommand;
+            }
+            set
+            {
+                usbTesterButtonCommand = value;
+            }
+        }
 
         // SubTitle
         private string mainTitle = string.Empty;
@@ -175,6 +193,20 @@ namespace PLCInterface
             }
         }
 
+        private Visibility usbTesterButtonVisible;
+        public Visibility UsbTesterButtonVisible
+        {
+            get
+            {
+                return usbTesterButtonVisible;
+            }
+            set
+            {
+                usbTesterButtonVisible = value;
+                OnPropertyChanged("UsbTesterButtonVisible");
+            }
+        }
+
         public MainWindowViewModel()
         {
             Logger.Info($"★★★ Anomaly Detection PLC Communicator Version: [{ProgramVersion}] ★★★");
@@ -202,6 +234,7 @@ namespace PLCInterface
 
             StartInterfaceCommand = new RelayCommand(StartInterfaceCommandExe, param => this.CanExecute);
             StopInterfaceCommand = new RelayCommand(StopInterfaceCommandExe, param => this.CanExecute);
+            UsbTesterButtonCommand = new RelayCommand(UsbTesterButtonCommandExe, param => this.CanExecute);
 
             UiWebStatusColor = new ObservableCollection<string>();
 
@@ -239,16 +272,22 @@ namespace PLCInterface
             else
                 AliveDevice = string.Empty;
 
+            // 0.7.2 : USB 경광등 테스트
+            UseUsbWarningLight = (ConfigurationManager.AppSettings["UseUsbWarningLight"] ?? string.Empty).ToUpper().Equals("TRUE");
+            if (UseUsbWarningLight)
+                UsbTesterButtonVisible = Visibility.Visible;
+            else
+                UsbTesterButtonVisible = Visibility.Collapsed;
+
             var httpServer = new HttpServer();
             Task.Run(() => httpServer.ActivateHttpService());
-
 
             if ((ConfigurationManager.AppSettings["AutoRun"] ?? string.Empty).ToUpper().Equals("TRUE"))
             {
                 try
                 {
                     Thread.Sleep(3000);
-                    InfoMessage = plc.StartInteface();
+                    InfoMessage = plc.StartInterface();
                     SetConnectionStatus();
                 }
                 catch (Exception ex)
@@ -308,6 +347,35 @@ namespace PLCInterface
             }
             finally { }
         }
+        
+        private void UsbTesterButtonCommandExe(object obj)
+        {
+            try
+            {
+                if (flash2 == 0)
+                    flash2 = 1;
+                else
+                    flash2 = 0;
+                write_tower_status();
+            }
+            catch (Exception ex)
+            {
+                Logger.Error($"Exception on {System.Reflection.MethodBase.GetCurrentMethod().Name} >>> {ex.Message}\r\n{ex.StackTrace}");
+            }
+            finally { }
+        }
+
+        int led0, led1, led2, led3, led4, flash0, flash1, flash2, flash3, flash4, sound_select;
+        private bool write_tower_status()
+        {
+            try
+            {
+                AuroraUSBTowerLamp.aurora_set_tower_switch(led0, led1, led2, led3, led4, flash0, flash1, flash2, flash3, flash4, sound_select);
+            }
+            catch { }
+            return true;
+        }
+
 
         private void SetConnectionStatus()
         {
