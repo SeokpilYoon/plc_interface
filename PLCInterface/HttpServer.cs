@@ -22,12 +22,24 @@ namespace PLCInterface
         private HttpListener listener = null;
         private Thread listenThread = null;
 
+        public int NumChannel { get; set; } = 1;
+        bool UseBusy = false;
+        bool AnomalyAutoOff = false;
+        bool UseLGDTMGlassScenario = false;
+        int[] results;
 
         public HttpServer()
         {
             //TraceManager.webRoot = (ConfigurationManager.AppSettings["AppFolder"] ?? @"D:/anomaly_detection/") + "LOG/";
             bindingAddress = "http://*:" + (ConfigurationManager.AppSettings["HttpServicePort"] ?? "6262") + "/";
             Logger.Info($"HTTP Server Binding Address is set to {bindingAddress}");
+
+            NumChannel = Convert.ToInt32(ConfigurationManager.AppSettings["NumChannel"] ?? "1");
+            UseBusy = (ConfigurationManager.AppSettings["UseBusy"] ?? string.Empty).ToUpper().Equals("TRUE");
+            AnomalyAutoOff = (ConfigurationManager.AppSettings["AnomalyAutoOff"] ?? string.Empty).ToUpper().Equals("TRUE");
+            UseLGDTMGlassScenario = (ConfigurationManager.AppSettings["UseLGDTMGlassScenario"] ?? string.Empty).ToUpper().Equals("TRUE");
+
+            results = new int[NumChannel];
         }
 
         /// <summary>
@@ -89,10 +101,14 @@ namespace PLCInterface
                     plc = new MelsecInterface();
                 else if (plcType == 2)
                     plc = new ModbusInterface();
+                else if (plcType == 3)
+                    plc = new AdvantechDAQInterface();
+                else if (plcType == 4)
+                    plc = new ADLinkDIOInterface(); // LGD에 3으로 배포되었으나 4로 변경
                 else
                     plc = new MelsecInterface();
 
-                plc.StartInteface();
+                plc.StartInterface();
                 
                 while (true)
                 {
@@ -115,7 +131,7 @@ namespace PLCInterface
                             string writeDeviceError = ConfigurationManager.AppSettings["ErrorAddress"] ?? string.Empty;
                             string writeDeviceDetectReady = ConfigurationManager.AppSettings["DetectReadyAddress"] ?? string.Empty;
                             string writeDeviceAlive = ConfigurationManager.AppSettings["AliveAddress"] ?? string.Empty;
-                            string writeDeviceLearnMode = ConfigurationManager.AppSettings["LearnModeAddress"] ?? string.Empty;                            
+                            string writeDeviceLearnMode = ConfigurationManager.AppSettings["LearnModeAddress"] ?? string.Empty;
 
                             writeDevice = JsonConvert.DeserializeObject<PlcVariable>(jsonText);
                             if (writeDevice.ChannelNo > 1)
@@ -128,15 +144,41 @@ namespace PLCInterface
                             {
                                 if (writeDevice.ReadValue == 1)
                                 {
-                                    if ((ConfigurationManager.AppSettings["UseBusy"] ?? string.Empty).ToUpper().Equals("TRUE"))
-                                        plc.SetAPLCValueOff(writeDeviceBusy);
-                                    plc.SetAPLCValueOn(writeDeviceOn);
-                                    plc.SetAPLCValueOff(writeDeviceOff);
-                                    plc.SetAPLCValueOff(writeDeviceCapture);
-                                    if ((ConfigurationManager.AppSettings["AnomalyAutoOff"] ?? string.Empty).ToUpper().Equals("TRUE"))
+                                    if (UseLGDTMGlassScenario == true)
                                     {
-                                        Thread.Sleep(500);
-                                        plc.SetAPLCValueOff(writeDeviceOn);
+                                        results[writeDevice.ChannelNo - 1] = 2;
+
+                                        int[] result_count = new int[3];
+                                        for (int i = 0; i < NumChannel; i++)
+                                        {
+                                            result_count[results[i]]++;
+                                        }
+                                        if(result_count[2] == 1)
+                                            plc.SetAPLCValueOn(writeDeviceOn);
+
+                                        if (result_count[0] == 0)
+                                            results.Initialize();
+
+                                        if (AnomalyAutoOff == true)
+                                        {
+                                            Thread.Sleep(1000);
+                                            plc.SetAPLCValueOff(writeDeviceOn);
+                                        }
+                                    }
+                                    else
+                                    {
+                                        if (UseBusy == true)
+                                            plc.SetAPLCValueOff(writeDeviceBusy);
+
+                                        plc.SetAPLCValueOn(writeDeviceOn);
+                                        plc.SetAPLCValueOff(writeDeviceOff);
+                                        plc.SetAPLCValueOff(writeDeviceCapture);
+
+                                        if(AnomalyAutoOff == true)
+                                        {
+                                            Thread.Sleep(1000);
+                                            plc.SetAPLCValueOff(writeDeviceOn);
+                                        }
                                     }
                                 }
                                 else if (writeDevice.ReadValue == 0)
@@ -148,20 +190,62 @@ namespace PLCInterface
                             {
                                 if (writeDevice.ReadValue == 1)
                                 {
-                                    if ((ConfigurationManager.AppSettings["UseBusy"] ?? string.Empty).ToUpper().Equals("TRUE"))
-                                        plc.SetAPLCValueOff(writeDeviceBusy);
-                                    plc.SetAPLCValueOff(writeDeviceOn);
-                                    plc.SetAPLCValueOn(writeDeviceOff);
-                                    plc.SetAPLCValueOff(writeDeviceCapture);
-                                    if ((ConfigurationManager.AppSettings["AnomalyAutoOff"] ?? string.Empty).ToUpper().Equals("TRUE"))
+                                    if (UseLGDTMGlassScenario == true)
                                     {
-                                        Thread.Sleep(500);
-                                        plc.SetAPLCValueOff(writeDeviceOff);
+                                        results[writeDevice.ChannelNo - 1] = 1;
+
+                                        int[] result_count = new int[3];
+                                        for (int i = 0; i < NumChannel; i++)
+                                        {
+                                            result_count[results[i]]++;
+                                        }
+                                        if (result_count[1] == NumChannel)
+                                            plc.SetAPLCValueOn(writeDeviceOff);
+
+                                        if (result_count[0] == 0)
+                                            results.Initialize();
+
+                                        if (AnomalyAutoOff == true)
+                                        {
+                                            Thread.Sleep(1000);
+                                            plc.SetAPLCValueOff(writeDeviceOff);
+                                        }
                                     }
+                                    else
+                                    {
+                                        if (UseBusy == true)
+                                            plc.SetAPLCValueOff(writeDeviceBusy);
+                                        plc.SetAPLCValueOff(writeDeviceOn);
+                                        plc.SetAPLCValueOn(writeDeviceOff);
+                                        plc.SetAPLCValueOff(writeDeviceCapture);
+                                        if (AnomalyAutoOff == true)
+                                        {
+                                            Thread.Sleep(500);
+                                            plc.SetAPLCValueOff(writeDeviceOff);
+                                        }
+                                    }                                    
                                 }
                                 else if (writeDevice.ReadValue == 0)
                                 {
                                     plc.SetAPLCValueOff(writeDeviceOff);
+                                }
+                            }
+                            else if (writeDevice.VarName == "NotDetecting")
+                            {
+                                if (UseLGDTMGlassScenario == true)
+                                {
+                                    results[writeDevice.ChannelNo - 1] = 1;
+
+                                    int[] result_count = new int[3];
+                                    for (int i = 0; i < NumChannel; i++)
+                                    {
+                                        result_count[results[i]]++;
+                                    }
+                                    if (result_count[1] == NumChannel)
+                                        plc.SetAPLCValueOn(writeDeviceOff);
+
+                                    if (result_count[0] == 0)
+                                        results.Initialize();
                                 }
                             }
                             else if (writeDevice.VarName == "AlarmOff")

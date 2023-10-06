@@ -28,39 +28,54 @@ namespace PLCInterface
 
         int[] readValues;
 
-        public string DeviceRandomToWrite { get; set; } = string.Empty;
 
         List<PlcVariable> ReadDevices;
         List<PlcVariable> WriteDevices;
         //private Task plcInterfaceTask;
         private string PreviousRead { get; set; } = string.Empty;
 
+        public int NumChannel { get; set; } = 1;
+
         public ModbusInterface()
         {
             try
             {
+                NumChannel = Convert.ToInt32(ConfigurationManager.AppSettings["NumChannel"] ?? "1");
+
                 #region Read Configuration
 
                 int interfaceIndex = 0;
                 ReadDevices = new List<PlcVariable>();
 
-                int modelQty = Convert.ToInt32(ConfigurationManager.AppSettings["ModelQty"] ?? "1");
-                string deviceModel = ConfigurationManager.AppSettings["ModelStartAddress"] ?? string.Empty;
-                if (modelQty > 1 && deviceModel.Length > 1)
+                int j;
+                for (j = 0; j < NumChannel; j++)
                 {
-                    string prefix = Regex.Replace(deviceModel, @"[^a-zA-Z]", "");
-                    int number = Convert.ToInt32(Regex.Replace(deviceModel, @"[^0-9]", ""));
-
-                    for (int i = 0; i < modelQty; i++)
+                    int modelQty = Convert.ToInt32(ConfigurationManager.AppSettings["ModelQty"] ?? "1");
+                    string deviceModel = ConfigurationManager.AppSettings["ModelStartAddress"] ?? string.Empty;
+                    if (j > 0)
                     {
-                        var plcVar = new PlcVariable(interfaceIndex++, $"Model{i + 1}", $"{prefix}{number++}");
-                        ReadDevices.Add(plcVar);
+                        modelQty = Convert.ToInt32(ConfigurationManager.AppSettings[$"ModelQty{j + 1}"] ?? "1");
+                        deviceModel = ConfigurationManager.AppSettings[$"ModelStartAddress{j + 1}"] ?? string.Empty;
+                    }
+                    if (modelQty > 1 && deviceModel.Length > 1)
+                    {
+                        string prefix = Regex.Replace(deviceModel, @"[^a-zA-Z]", "");
+                        int number = Convert.ToInt32(Regex.Replace(deviceModel, @"[^0-9]", ""));
+
+                        for (int i = 0; i < modelQty; i++)
+                        {
+                            var plcVar = new PlcVariable(interfaceIndex++, $"Model{i+1}", $"{prefix}{number++}", j+1);
+                            ReadDevices.Add(plcVar);
+                        }
                     }
                 }
 
-                CheckPlcAddress(interfaceIndex++, "TriggerAddress", true);
-                CheckPlcAddress(interfaceIndex++, "MbbTriggerAddress", true);
-                CheckPlcAddress(interfaceIndex++, "ReadyAddress", true);
+                for (j = 0; j < NumChannel; j++)
+                {
+                    CheckPlcAddress(interfaceIndex++, "TriggerAddress", true, j+1);
+                    CheckPlcAddress(interfaceIndex++, "MbbTriggerAddress", true, j+1);
+                    CheckPlcAddress(interfaceIndex++, "ReadyAddress", true, j+1);
+                }
 
                 #endregion Read Configuration
 
@@ -86,7 +101,7 @@ namespace PLCInterface
             finally { }
         }
 
-        public override string StartInteface()
+        public override string StartInterface()
         {
             string returnMessage = string.Empty;
             try
@@ -183,7 +198,26 @@ namespace PLCInterface
                 {
                     // 비동기로 보낸다
                     string json = JsonConvert.SerializeObject(ReadDevices);
-                    Task.Run(() => HttpMessage.SendHttpMessage(json));
+                    //Task.Run(() => HttpMessage.SendHttpMessage(json));
+                    var messageTasks = new List<Task>();
+                    for (int j = 0; j < NumChannel; j++)
+                    {
+                        messageTasks.Add(Task.Run(() =>
+                        {
+                            HttpMessage.SendHttpMessage(json, j + 1);
+                        }));
+                        Thread.Sleep(10);   // 이 부분 없으면 꼬임(TODO: 쓰레드 간 변수 독립성 보장 필요)
+                    }
+                    try
+                    {
+                        Task t = Task.WhenAll(messageTasks);
+                        t.Wait();
+                    }
+                    catch (AggregateException) { }
+                    catch (Exception ex)
+                    {
+                        Logger.Error($"Exception on {System.Reflection.MethodBase.GetCurrentMethod().Name} >>> {ex.Message}\r\n{ex.StackTrace}");
+                    }
 
                     var itemReady = ReadDevices.Find(x => x.VarName == "ReadyAddress");
                     if (itemReady != null && itemReady.ReadValue == 0)
@@ -208,14 +242,18 @@ namespace PLCInterface
         }
 
 
-        private void CheckPlcAddress(int index, string appSettingName, bool isRead = true)
+        private void CheckPlcAddress(int index, string appSettingName, bool isRead = true, int ch = 1)
         {
             try
             {
-                string device = ConfigurationManager.AppSettings[appSettingName] ?? string.Empty;
+                string appSettingNameCH = appSettingName;
+                if (ch > 1)
+                    appSettingNameCH = $"{appSettingNameCH}{ch}";
+
+                string device = ConfigurationManager.AppSettings[appSettingNameCH] ?? string.Empty;
                 if (device != string.Empty)
                 {
-                    var plcVar = new PlcVariable(index, appSettingName, device);
+                    var plcVar = new PlcVariable(index, appSettingName, device, ch);
                     if (isRead)
                     {
                         ReadDevices.Add(plcVar);
@@ -263,7 +301,7 @@ namespace PLCInterface
                 {
                     Logger.Error($"Exception on {System.Reflection.MethodBase.GetCurrentMethod().Name} >>> {ex.Message}\r\n{ex.StackTrace}");
                     res = -1;
-                    StartInteface();
+                    StartInterface();
                 }
                 finally { }
             }
@@ -297,7 +335,7 @@ namespace PLCInterface
                 {
                     Logger.Error($"Exception on {System.Reflection.MethodBase.GetCurrentMethod().Name} >>> {ex.Message}\r\n{ex.StackTrace}");
                     res = -1;
-                    StartInteface();    // write coil 디바이스가 계속 연결이 끊겨 exception 발생하여 connect+retry 추가함
+                    StartInterface();    // write coil 디바이스가 계속 연결이 끊겨 exception 발생하여 connect+retry 추가함
                 }
                 finally { }
             }
@@ -377,6 +415,11 @@ namespace PLCInterface
         {
             string dummy = "";
             return dummy;
+        }
+
+        public override int GetReadDevicesCount()
+        {
+            return ReadDevices.Count;
         }
     }
 }

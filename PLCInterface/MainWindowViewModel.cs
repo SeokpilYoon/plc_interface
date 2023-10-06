@@ -16,7 +16,7 @@ namespace PLCInterface
         public bool IsConfigurationSuccess { get; set; } = false;
         public bool IsAlive { get; set; } = false;
 
-        public abstract string StartInteface();
+        public abstract string StartInterface();
         public abstract int OpenConnection();
         public abstract int CloseConnection();
         public abstract string ReadPlcValues();
@@ -24,15 +24,15 @@ namespace PLCInterface
         public abstract int SetAPLCValueOff(string device);
         public abstract int WriteToPLCRandomString(string device, string text);
         public abstract string ReadFromPLCRandomString(string device, int size);
+        public abstract int GetReadDevicesCount();
     }
 
     class MainWindowViewModel : ViewModelBase
     {
-        private static string ProgramVersion { get; set; } = "0.6.81"; // 81 : autorun 기능 추가
+        private static string ProgramVersion { get; set; } = "0.7.2"; // 동아엘텍 Aurora USB 경광등 추가
 
         [DllImport("kernel32")]
         public static extern Int32 GetCurrentProcessId();
-
 
         //MelsecInterface melsec;
         CommonInterface plc;
@@ -193,6 +193,10 @@ namespace PLCInterface
                 plc = new MelsecInterface();
             else if(plcType == 2)
                 plc = new ModbusInterface();
+            else if (plcType == 3)
+                plc = new AdvantechDAQInterface();
+            else if (plcType == 4)
+                plc = new ADLinkDIOInterface(); // LGD에 3으로 배포되었으나 4로 변경
             else
                 plc = new MelsecInterface();
 
@@ -202,9 +206,9 @@ namespace PLCInterface
             UiWebStatusColor = new ObservableCollection<string>();
 
             PlcStatusColor = "gray";
-            for (int i=0; i<4; i++)
+            for (int i=0; i<6; i++)
                 UiWebStatusColor.Add("gray");
-             StartPressedColor = "gray";
+            StartPressedColor = "gray";
             StopPressedColor = "gray";
             InfoMessage = $"Configuration Setting Success: {plc.IsConfigurationSuccess}";
 
@@ -259,7 +263,7 @@ namespace PLCInterface
         {
             try
             {
-                InfoMessage = plc.StartInteface();
+                InfoMessage = plc.StartInterface();
                 SetConnectionStatus();
             }
             catch(Exception ex)
@@ -289,6 +293,7 @@ namespace PLCInterface
                 
                 PlcInterfaceTimer.Enabled = false;
                 PlcAliveTimer.Enabled = false;
+                WriteAliveOff();
 
                 StartPressedColor = "gray";
                 StopPressedColor = "greenyellow";
@@ -314,8 +319,17 @@ namespace PLCInterface
                 PlcStatusColor = "greenyellow";
                 //StartPressedColor = "greenyellow";
                 //StopPressedColor = "gray";
-                PlcInterfaceTimer.Enabled = true;
-                PlcAliveTimer.Enabled = true;
+                if (plc.GetReadDevicesCount() > 0)
+                    PlcInterfaceTimer.Enabled = true;
+                else
+                {
+                    int NumChannel = Convert.ToInt32(ConfigurationManager.AppSettings["NumChannel"] ?? "1");
+                    for (int i=0; i< NumChannel; i++)
+                        UiWebStatusColor[i] = "greenyellow";
+                }
+                if (((ConfigurationManager.AppSettings["UseAlive"] ?? string.Empty).ToUpper().Equals("TRUE"))
+                   && ((ConfigurationManager.AppSettings["UseUIAlive"] ?? "FALSE").ToUpper().Equals("FALSE")))
+                    PlcAliveTimer.Enabled = true;
             }
             else
             {
@@ -334,6 +348,20 @@ namespace PLCInterface
 
                 int NumChannel = Convert.ToInt32(ConfigurationManager.AppSettings["NumChannel"] ?? "1");
 
+                if (NumChannel >= 6)
+                {
+                    if (HttpMessage.IsSuccessToSend6)
+                        UiWebStatusColor[5] = "greenyellow";
+                    else
+                        UiWebStatusColor[5] = "red";
+                }
+                if (NumChannel >= 5)
+                {
+                    if (HttpMessage.IsSuccessToSend5)
+                        UiWebStatusColor[4] = "greenyellow";
+                    else
+                        UiWebStatusColor[4] = "red";
+                }
                 if (NumChannel >= 4)
                 {
                     if (HttpMessage.IsSuccessToSend4)
@@ -408,6 +436,23 @@ namespace PLCInterface
             finally
             {
                 PlcAliveTimer.Enabled = true;
+            }
+        }
+
+        private void WriteAliveOff()
+        {
+            try
+            {
+                if (AliveDevice != string.Empty)
+                {
+                    int res = plc.SetAPLCValueOff(AliveDevice);
+                    AliveOn = false;
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.Error($"Exception on {System.Reflection.MethodBase.GetCurrentMethod().Name} >>> {ex.Message}\r\n{ex.StackTrace}");
+                InfoMessage = "Error while reading & operating PLC values";
             }
         }
 
