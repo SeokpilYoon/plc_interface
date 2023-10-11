@@ -109,7 +109,7 @@
     </ApplicationDefinition>
     <Compile Include="ADLinkDIO.cs" />
     <Compile Include="AdvantechDAQInterface.cs" />
-    <Compile Include="AuroraUSBTowerLamp.cs" />
+    <Compile Include="AuroraUSBTowerLampInterface.cs" />
     <Compile Include="ModbusInterface.cs" />
     <Compile Include="HttpMessage.cs" />
     <Compile Include="HttpServer.cs" />

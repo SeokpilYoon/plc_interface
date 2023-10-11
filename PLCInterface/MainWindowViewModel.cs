@@ -10,7 +10,6 @@ using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Windows.Controls;
-using ChunilElectric;
 using System.Windows;
 
 namespace PLCInterface
@@ -42,7 +41,7 @@ namespace PLCInterface
         CommonInterface plc;
         private System.Timers.Timer PlcInterfaceTimer = null;
         private System.Timers.Timer PlcAliveTimer = null;
-        bool UseUsbWarningLight = false;
+        bool UseAuroraTowerLamp = false;
 
         private string plcStatusColor = string.Empty;
         public string PlcStatusColor
@@ -273,8 +272,8 @@ namespace PLCInterface
                 AliveDevice = string.Empty;
 
             // 0.7.2 : USB 경광등 테스트
-            UseUsbWarningLight = (ConfigurationManager.AppSettings["UseUsbWarningLight"] ?? string.Empty).ToUpper().Equals("TRUE");
-            if (UseUsbWarningLight)
+            UseAuroraTowerLamp = (ConfigurationManager.AppSettings["UseAuroraTowerLamp"] ?? string.Empty).ToUpper().Equals("TRUE");
+            if (UseAuroraTowerLamp)
                 UsbTesterButtonVisible = Visibility.Visible;
             else
                 UsbTesterButtonVisible = Visibility.Collapsed;
@@ -370,7 +369,7 @@ namespace PLCInterface
         {
             try
             {
-                AuroraUSBTowerLamp.aurora_set_tower_switch(led0, led1, led2, led3, led4, flash0, flash1, flash2, flash3, flash4, sound_select);
+                AuroraUSBTowerLampInterface.aurora_set_tower_switch(led0, led1, led2, led3, led4, flash0, flash1, flash2, flash3, flash4, sound_select);
             }
             catch { }
             return true;
