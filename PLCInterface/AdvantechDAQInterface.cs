@@ -412,6 +412,10 @@ namespace PLCInterface
                 ReportTimer.Enabled = false;
                 int reportChannel = 0;
 
+                GlobalInfo.DongaResults.Sort(SortChannel);
+                //List<DongaResult> dongaResults = new List<DongaResult>();
+                //dongaResults = GlobalInfo.DongaResults.OrderBy(t => t.CHANNEL).ToList();
+
                 for (int i = 0; i < GlobalInfo.DongaResults.Count; i++)
                 {
                     if (GlobalInfo.DongaResults[i].OK_YN == "N")
@@ -431,6 +435,10 @@ namespace PLCInterface
                 }
                 GlobalInfo.DongaResults.Clear();
             }
+        }
+        static int SortChannel(DongaResult x, DongaResult y)
+        {
+            return y.CHANNEL - x.CHANNEL;
         }
     }
 }

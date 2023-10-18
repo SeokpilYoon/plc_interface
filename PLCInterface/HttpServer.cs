@@ -24,6 +24,7 @@ namespace PLCInterface
     }
     public class DongaResult
     {
+        public int CHANNEL { get; set; }
         public string PART_NO { get; set; }
         public string LINE_CD { get; set; }
         public string TEST_DT { get; set; }
