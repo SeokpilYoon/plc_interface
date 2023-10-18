@@ -1,5 +1,6 @@
 ﻿using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using Oracle.ManagedDataAccess.Client;
 using System;
 using System.Collections.Generic;
 using System.Configuration;
@@ -21,6 +22,15 @@ namespace PLCInterface
         public bool Buzzer { get; set; }
         public bool Blink { get; set; }
     }
+    public class DongaResult
+    {
+        public string PART_NO { get; set; }
+        public string LINE_CD { get; set; }
+        public string TEST_DT { get; set; }
+        public string OK_YN { get; set; }
+        public string IMAGEPATH { get; set; }
+        public string CAMERA_NO { get; set; }
+    }
 
     public class HttpServer
     {
@@ -31,11 +41,9 @@ namespace PLCInterface
         private HttpListener listener = null;
         private Thread listenThread = null;
 
-        public int NumChannel { get; set; } = 1;
         bool UseBusy = false;
         bool AnomalyAutoOff = false;
         bool UseLGDTMGlassScenario = false;
-        bool UseAuroraTowerLamp = false;
         int[] results;
 
         public HttpServer()
@@ -44,12 +52,11 @@ namespace PLCInterface
             bindingAddress = "http://*:" + (ConfigurationManager.AppSettings["HttpServicePort"] ?? "6262") + "/";
             Logger.Info($"HTTP Server Binding Address is set to {bindingAddress}");
 
-            NumChannel = Convert.ToInt32(ConfigurationManager.AppSettings["NumChannel"] ?? "1");
             UseBusy = (ConfigurationManager.AppSettings["UseBusy"] ?? string.Empty).ToUpper().Equals("TRUE");
             AnomalyAutoOff = (ConfigurationManager.AppSettings["AnomalyAutoOff"] ?? string.Empty).ToUpper().Equals("TRUE");
             UseLGDTMGlassScenario = (ConfigurationManager.AppSettings["UseLGDTMGlassScenario"] ?? string.Empty).ToUpper().Equals("TRUE");
 
-            results = new int[NumChannel];
+            results = new int[GlobalInfo.NumChannel];
         }
 
         /// <summary>
@@ -119,11 +126,12 @@ namespace PLCInterface
                     plc = new MelsecInterface();
 
                 plc.StartInterface();
-
-                UseAuroraTowerLamp = (ConfigurationManager.AppSettings["UseAuroraTowerLamp"] ?? string.Empty).ToUpper().Equals("TRUE");
-                AuroraUSBTowerLampInterface auroraUSBTowerLampInterface = new AuroraUSBTowerLampInterface();
-                if (UseAuroraTowerLamp == true)
+                
+                /*if (GlobalInfo.UseAuroraTowerLamp == true)
+                {
+                    AuroraUSBTowerLampInterface auroraUSBTowerLampInterface = new AuroraUSBTowerLampInterface();
                     auroraUSBTowerLampInterface.StartInterface();
+                }*/
 
                 while (true)
                 {
@@ -138,11 +146,21 @@ namespace PLCInterface
                         Logger.Trace($"{jsonText}");
                         try
                         {
-                            if (request.Url.LocalPath == "/USBLamp")
+                            /*if (request.Url.LocalPath == "/USBLamp")
                             {
                                 USBLamp uSBLamp = JsonConvert.DeserializeObject<USBLamp>(jsonText);
-                                if (UseAuroraTowerLamp == true)
+                                if (GlobalInfo.UseAuroraTowerLamp == true)
                                     auroraUSBTowerLampInterface.SetLed(uSBLamp.Red, uSBLamp.Yellow, uSBLamp.Green, uSBLamp.Buzzer, uSBLamp.Blink);
+                            }
+                            else*/
+                            if (request.Url.LocalPath == "/Donga_Result")
+                            {
+                                if (GlobalInfo.UseOracleDB == true && GlobalInfo.UseDongaScenario == true)
+                                {
+                                    DongaResult dongaResult = JsonConvert.DeserializeObject<DongaResult>(jsonText);
+                                    GlobalInfo.DongaResults.Add(dongaResult);
+                                    //Utility.SendOracleDB(dongaResult.PART_NO, dongaResult.LINE_CD, dongaResult.TEST_DT, dongaResult.OK_YN, dongaResult.IMAGEPATH, dongaResult.CAMERA_NO);
+                                }
                             }
                             else
                             {
@@ -172,7 +190,7 @@ namespace PLCInterface
                                             results[writeDevice.ChannelNo - 1] = 2;
 
                                             int[] result_count = new int[3];
-                                            for (int i = 0; i < NumChannel; i++)
+                                            for (int i = 0; i < GlobalInfo.NumChannel; i++)
                                             {
                                                 result_count[results[i]]++;
                                             }
@@ -218,11 +236,11 @@ namespace PLCInterface
                                             results[writeDevice.ChannelNo - 1] = 1;
 
                                             int[] result_count = new int[3];
-                                            for (int i = 0; i < NumChannel; i++)
+                                            for (int i = 0; i < GlobalInfo.NumChannel; i++)
                                             {
                                                 result_count[results[i]]++;
                                             }
-                                            if (result_count[1] == NumChannel)
+                                            if (result_count[1] == GlobalInfo.NumChannel)
                                                 plc.SetAPLCValueOn(writeDeviceOff);
 
                                             if (result_count[0] == 0)
@@ -260,11 +278,11 @@ namespace PLCInterface
                                         results[writeDevice.ChannelNo - 1] = 1;
 
                                         int[] result_count = new int[3];
-                                        for (int i = 0; i < NumChannel; i++)
+                                        for (int i = 0; i < GlobalInfo.NumChannel; i++)
                                         {
                                             result_count[results[i]]++;
                                         }
-                                        if (result_count[1] == NumChannel)
+                                        if (result_count[1] == GlobalInfo.NumChannel)
                                             plc.SetAPLCValueOn(writeDeviceOff);
 
                                         if (result_count[0] == 0)
@@ -466,7 +484,6 @@ namespace PLCInterface
         //    }
 
         //    await Task.Delay(10);
-        //}
-
+        //}        
     }
 }

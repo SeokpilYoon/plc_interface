@@ -26,7 +26,6 @@ namespace PLCInterface
         List<PlcVariable> WriteDevices;
         int[] readValues;
         private string PreviousRead { get; set; } = string.Empty;
-        public int NumChannel { get; set; } = 1;
 
         public ADLinkDIOInterface()
         {
@@ -36,15 +35,13 @@ namespace PLCInterface
 
                 DIO_TriggerPort = Convert.ToInt32(ConfigurationManager.AppSettings["TriggerAddress"] ?? "0");
 
-                NumChannel = Convert.ToInt32(ConfigurationManager.AppSettings["NumChannel"] ?? "1");
-
                 #region Read Configuration
 
                 int interfaceIndex = 0;
                 ReadDevices = new List<PlcVariable>();
 
                 /*int j;
-                for (j = 0; j < NumChannel; j++)
+                for (j = 0; j < GlobalInfo.NumChannel; j++)
                 {
                     int modelQty = Convert.ToInt32(ConfigurationManager.AppSettings["ModelQty"] ?? "1");
                     string deviceModel = ConfigurationManager.AppSettings["ModelStartAddress"] ?? string.Empty;
@@ -66,7 +63,7 @@ namespace PLCInterface
                     }
                 }*/
 
-                //for (j = 0; j < NumChannel; j++)
+                //for (j = 0; j < GlobalInfo.NumChannel; j++)
                 {
                     CheckPlcAddress(interfaceIndex++, "TriggerAddress", true);//, j + 1);
                     //CheckPlcAddress(interfaceIndex++, "MbbTriggerAddress", true, j + 1);
@@ -174,7 +171,7 @@ namespace PLCInterface
                 //Task.Run(() => HttpMessage.SendHttpMessage(json));
                 var messageTasks = new List<Task>();
                 ReadDevices[0].ReadValue = (int)triggerData;
-                for (int j = 0; j < NumChannel; j++)
+                for (int j = 0; j < GlobalInfo.NumChannel; j++)
                 {
                     ReadDevices[0].ChannelNo = j + 1;
                     string json = JsonConvert.SerializeObject(ReadDevices);

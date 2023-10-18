@@ -14,25 +14,9 @@ using System.Windows;
 
 namespace PLCInterface
 {
-    abstract class CommonInterface
-    {
-        public bool IsConfigurationSuccess { get; set; } = false;
-        public bool IsAlive { get; set; } = false;
-
-        public abstract string StartInterface();
-        public abstract int OpenConnection();
-        public abstract int CloseConnection();
-        public abstract string ReadPlcValues();
-        public abstract int SetAPLCValueOn(string device);
-        public abstract int SetAPLCValueOff(string device);
-        public abstract int WriteToPLCRandomString(string device, string text);
-        public abstract string ReadFromPLCRandomString(string device, int size);
-        public abstract int GetReadDevicesCount();
-    }
-
     class MainWindowViewModel : ViewModelBase
     {
-        private static string ProgramVersion { get; set; } = "0.7.2"; // 동아엘텍 Aurora USB 경광등 추가
+        private static string ProgramVersion { get; set; } = "0.7.3"; // 동아엘텍 Aurora USB 경광등 추가
 
         [DllImport("kernel32")]
         public static extern Int32 GetCurrentProcessId();
@@ -41,7 +25,6 @@ namespace PLCInterface
         CommonInterface plc;
         private System.Timers.Timer PlcInterfaceTimer = null;
         private System.Timers.Timer PlcAliveTimer = null;
-        bool UseAuroraTowerLamp = false;
 
         private string plcStatusColor = string.Empty;
         public string PlcStatusColor
@@ -219,6 +202,9 @@ namespace PLCInterface
                 }
             }
 
+            // Initialization Global Variable
+            InitialzeGloblaVariables();
+
             byte plcType = Convert.ToByte(ConfigurationManager.AppSettings["PlcType"] ?? "1");
             if (plcType == 1)
                 plc = new MelsecInterface();
@@ -272,8 +258,7 @@ namespace PLCInterface
                 AliveDevice = string.Empty;
 
             // 0.7.2 : USB 경광등 테스트
-            UseAuroraTowerLamp = (ConfigurationManager.AppSettings["UseAuroraTowerLamp"] ?? string.Empty).ToUpper().Equals("TRUE");
-            if (UseAuroraTowerLamp)
+            if (GlobalInfo.UseAuroraTowerLamp)
                 UsbTesterButtonVisible = Visibility.Visible;
             else
                 UsbTesterButtonVisible = Visibility.Collapsed;
@@ -295,6 +280,19 @@ namespace PLCInterface
                 }
                 finally { }
             }
+        }
+
+        private void InitialzeGloblaVariables()
+        {
+            try
+            {
+                GlobalInfo.InitializeGlobalInfo();
+            }
+            catch (Exception ex)
+            {
+                Logger.Error($"Exception on {System.Reflection.MethodBase.GetCurrentMethod().Name} >>> {ex.Message}\r\n{ex.StackTrace}");
+            }
+            finally { }
         }
 
         private void StartInterfaceCommandExe(object obj)
@@ -336,8 +334,7 @@ namespace PLCInterface
                 StartPressedColor = "gray";
                 StopPressedColor = "greenyellow";
                 PlcStatusColor = "yellow";
-                int NumChannel = Convert.ToInt32(ConfigurationManager.AppSettings["NumChannel"] ?? "1");
-                for (int i = 0; i < NumChannel; i++)
+                for (int i = 0; i < GlobalInfo.NumChannel; i++)
                     UiWebStatusColor[i] = "yellow";
             }
             catch (Exception ex)
@@ -390,8 +387,7 @@ namespace PLCInterface
                     PlcInterfaceTimer.Enabled = true;
                 else
                 {
-                    int NumChannel = Convert.ToInt32(ConfigurationManager.AppSettings["NumChannel"] ?? "1");
-                    for (int i=0; i< NumChannel; i++)
+                    for (int i=0; i< GlobalInfo.NumChannel; i++)
                         UiWebStatusColor[i] = "greenyellow";
                 }
                 if (((ConfigurationManager.AppSettings["UseAlive"] ?? string.Empty).ToUpper().Equals("TRUE"))
@@ -413,37 +409,35 @@ namespace PLCInterface
                 PlcInterfaceTimer.Enabled = false;
                 InfoMessage = plc.ReadPlcValues();
 
-                int NumChannel = Convert.ToInt32(ConfigurationManager.AppSettings["NumChannel"] ?? "1");
-
-                if (NumChannel >= 6)
+                if (GlobalInfo.NumChannel >= 6)
                 {
                     if (HttpMessage.IsSuccessToSend6)
                         UiWebStatusColor[5] = "greenyellow";
                     else
                         UiWebStatusColor[5] = "red";
                 }
-                if (NumChannel >= 5)
+                if (GlobalInfo.NumChannel >= 5)
                 {
                     if (HttpMessage.IsSuccessToSend5)
                         UiWebStatusColor[4] = "greenyellow";
                     else
                         UiWebStatusColor[4] = "red";
                 }
-                if (NumChannel >= 4)
+                if (GlobalInfo.NumChannel >= 4)
                 {
                     if (HttpMessage.IsSuccessToSend4)
                         UiWebStatusColor[3] = "greenyellow";
                     else
                         UiWebStatusColor[3] = "red";
                 }
-                if (NumChannel >= 3)
+                if (GlobalInfo.NumChannel >= 3)
                 {
                     if (HttpMessage.IsSuccessToSend3)
                         UiWebStatusColor[2] = "greenyellow";
                     else
                         UiWebStatusColor[2] = "red";
                 }
-                if (NumChannel >= 2)
+                if (GlobalInfo.NumChannel >= 2)
                 {
                     if (HttpMessage.IsSuccessToSend2)
                         UiWebStatusColor[1] = "greenyellow";

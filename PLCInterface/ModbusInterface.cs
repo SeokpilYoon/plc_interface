@@ -34,21 +34,17 @@ namespace PLCInterface
         //private Task plcInterfaceTask;
         private string PreviousRead { get; set; } = string.Empty;
 
-        public int NumChannel { get; set; } = 1;
-
         public ModbusInterface()
         {
             try
             {
-                NumChannel = Convert.ToInt32(ConfigurationManager.AppSettings["NumChannel"] ?? "1");
-
                 #region Read Configuration
 
                 int interfaceIndex = 0;
                 ReadDevices = new List<PlcVariable>();
 
                 int j;
-                for (j = 0; j < NumChannel; j++)
+                for (j = 0; j < GlobalInfo.NumChannel; j++)
                 {
                     int modelQty = Convert.ToInt32(ConfigurationManager.AppSettings["ModelQty"] ?? "1");
                     string deviceModel = ConfigurationManager.AppSettings["ModelStartAddress"] ?? string.Empty;
@@ -70,7 +66,7 @@ namespace PLCInterface
                     }
                 }
 
-                for (j = 0; j < NumChannel; j++)
+                for (j = 0; j < GlobalInfo.NumChannel; j++)
                 {
                     CheckPlcAddress(interfaceIndex++, "TriggerAddress", true, j+1);
                     CheckPlcAddress(interfaceIndex++, "MbbTriggerAddress", true, j+1);
@@ -200,7 +196,7 @@ namespace PLCInterface
                     string json = JsonConvert.SerializeObject(ReadDevices);
                     //Task.Run(() => HttpMessage.SendHttpMessage(json));
                     var messageTasks = new List<Task>();
-                    for (int j = 0; j < NumChannel; j++)
+                    for (int j = 0; j < GlobalInfo.NumChannel; j++)
                     {
                         messageTasks.Add(Task.Run(() =>
                         {

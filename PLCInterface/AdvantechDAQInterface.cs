@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Configuration;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Timers;
 using Automation.BDaq;
 using Newtonsoft.Json;
 
@@ -22,7 +23,9 @@ namespace PLCInterface
 
         List<PlcVariable> ReadDevices;
         List<PlcVariable> WriteDevices;
-        public int NumChannel { get; set; } = 1;
+
+        private System.Timers.Timer ReportTimer = null;
+        AuroraUSBTowerLampInterface auroraUSBTowerLampInterface;
 
         public AdvantechDAQInterface()
         {
@@ -38,13 +41,25 @@ namespace PLCInterface
                 DIO_TriggerOnPort = Convert.ToInt32(ConfigurationManager.AppSettings["DIO_TriggerOnPort"] ?? "0");
                 DIO_TriggerOffPort = Convert.ToInt32(ConfigurationManager.AppSettings["DIO_TriggerOffPort"] ?? "0");
 
-                NumChannel = Convert.ToInt32(ConfigurationManager.AppSettings["NumChannel"] ?? "1");
-
                 #region Read Configuration
                 int interfaceIndex = 0;
                 ReadDevices = new List<PlcVariable>();
                 CheckPlcAddress(interfaceIndex++, "TriggerAddress", true);
                 #endregion
+
+                ReportTimer = new System.Timers.Timer
+                {
+                    Interval = 100,
+                    AutoReset = true,
+                    Enabled = false
+                };
+                ReportTimer.Elapsed += new ElapsedEventHandler(ReportTimerHandler);
+
+                if (GlobalInfo.UseAuroraTowerLamp == true)
+                {
+                    auroraUSBTowerLampInterface = new AuroraUSBTowerLampInterface();
+                    auroraUSBTowerLampInterface.StartInterface();
+                }
 
                 IsConfigurationSuccess = true;
             }
@@ -129,6 +144,8 @@ namespace PLCInterface
                         if (TriggerStatus == false)
                         {
                             TriggerStatus = true;
+                            ReportTimer.Enabled = false;
+                            GlobalInfo.DongaResults.Clear();
 
                             // Send Trigger On
                             foreach (PlcVariable item in ReadDevices)
@@ -142,8 +159,11 @@ namespace PLCInterface
                             // 비동기로 보낸다
                             var messageTasks = new List<Task>();
                             ReadDevices[0].ReadValue = 1;
-                            for (int j = 0; j < NumChannel; j++)
+                            for (int j = 0; j < GlobalInfo.NumChannel; j++)
                             {
+                                if (GlobalInfo.EnableChannels[j] == false)
+                                    continue;
+
                                 ReadDevices[0].ChannelNo = j + 1;
                                 string json = JsonConvert.SerializeObject(ReadDevices);
                                 messageTasks.Add(Task.Run(() =>
@@ -189,8 +209,11 @@ namespace PLCInterface
                             // 비동기로 보낸다
                             var messageTasks = new List<Task>();
                             ReadDevices[0].ReadValue = 0;
-                            for (int j = 0; j < NumChannel; j++)
+                            for (int j = 0; j < GlobalInfo.NumChannel; j++)
                             {
+                                if (GlobalInfo.EnableChannels[j] == false)
+                                    continue;
+
                                 ReadDevices[0].ChannelNo = j + 1;
                                 string json = JsonConvert.SerializeObject(ReadDevices);
                                 messageTasks.Add(Task.Run(() =>
@@ -210,6 +233,8 @@ namespace PLCInterface
                                 Logger.Error($"Exception on {System.Reflection.MethodBase.GetCurrentMethod().Name} >>> {ex.Message}\r\n{ex.StackTrace}");
                             }
                             Logger.Debug("Pooling 'TRIGGER_Off' message from DIO");
+
+                            ReportTimer.Enabled = true;
                         }
                     }
                 }
@@ -228,7 +253,7 @@ namespace PLCInterface
                     // 비동기로 보낸다
                     var messageTasks = new List<Task>();
                     ReadDevices[0].ReadValue = (int)triggerData;
-                    for (int j = 0; j < NumChannel; j++)
+                    for (int j = 0; j < GlobalInfo.NumChannel; j++)
                     {
                         ReadDevices[0].ChannelNo = j + 1;
                         string json = JsonConvert.SerializeObject(ReadDevices);
@@ -378,6 +403,34 @@ namespace PLCInterface
                 Logger.Error($"Exception on {System.Reflection.MethodBase.GetCurrentMethod().Name} >>> {ex.Message}\r\n{ex.StackTrace}");
             }
             finally { }
+        }
+
+        private void ReportTimerHandler(object source, ElapsedEventArgs e)
+        {
+            if (GlobalInfo.DongaResults.Count == GlobalInfo.NumEnabledChannel)
+            {
+                ReportTimer.Enabled = false;
+                int reportChannel = 0;
+
+                for (int i = 0; i < GlobalInfo.DongaResults.Count; i++)
+                {
+                    if (GlobalInfo.DongaResults[i].OK_YN == "N")
+                    {
+                        reportChannel = i;
+                        break;
+                    }
+                }
+
+                Utility.SendOracleDB(GlobalInfo.DongaResults[reportChannel].PART_NO, GlobalInfo.DongaResults[reportChannel].LINE_CD, GlobalInfo.DongaResults[reportChannel].TEST_DT, GlobalInfo.DongaResults[reportChannel].OK_YN, GlobalInfo.DongaResults[reportChannel].IMAGEPATH, GlobalInfo.DongaResults[reportChannel].CAMERA_NO);
+                if (GlobalInfo.UseAuroraTowerLamp == true)
+                {
+                    if (GlobalInfo.DongaResults[reportChannel].OK_YN == "Y")
+                        auroraUSBTowerLampInterface.SetLed(false, false, true, false, false);
+                    else
+                        auroraUSBTowerLampInterface.SetLed(GlobalInfo.USBLamp_AlarmRed, GlobalInfo.USBLamp_AlarmYellow, false, GlobalInfo.USBLamp_AlarmBuzzer, false);
+                }
+                GlobalInfo.DongaResults.Clear();
+            }
         }
     }
 }
