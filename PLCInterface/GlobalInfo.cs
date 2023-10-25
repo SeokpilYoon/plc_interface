@@ -39,7 +39,7 @@ namespace PLCInterface
                 EnableChannels = new bool[NumChannel];
                 for (int i = 0; i < NumChannel; i++)
                 {
-                    EnableChannels[i] = (ConfigurationManager.AppSettings[$"EnableChannel{i}"] ?? "FALSE").ToUpper().Equals("TRUE");
+                    EnableChannels[i] = (ConfigurationManager.AppSettings[$"EnableChannel{i+1}"] ?? "FALSE").ToUpper().Equals("TRUE");
                     if (EnableChannels[i] == true)
                         NumEnabledChannel++;
                 }
