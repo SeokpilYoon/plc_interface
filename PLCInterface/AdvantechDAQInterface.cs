@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Configuration;
+using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Timers;
@@ -146,6 +147,9 @@ namespace PLCInterface
                             TriggerStatus = true;
                             ReportTimer.Enabled = false;
                             GlobalInfo.DongaResults.Clear();
+
+                            // Trigger 시간 폴더 생성
+                            GlobalInfo.DongaTriggerTime = DateTime.Now.ToString("yyyyMMddHHmmss");
 
                             // Send Trigger On
                             foreach (PlcVariable item in ReadDevices)
@@ -425,6 +429,8 @@ namespace PLCInterface
                     }
                 }
 
+                DongaCopyAndMakeFile(reportChannel);
+
                 Utility.SendOracleDB(GlobalInfo.DongaResults[reportChannel].PART_NO, GlobalInfo.DongaResults[reportChannel].LINE_CD, GlobalInfo.DongaResults[reportChannel].TEST_DT, GlobalInfo.DongaResults[reportChannel].OK_YN, GlobalInfo.DongaResults[reportChannel].IMAGEPATH, GlobalInfo.DongaResults[reportChannel].CAMERA_NO);
                 if (GlobalInfo.UseAuroraTowerLamp == true)
                 {
@@ -439,6 +445,38 @@ namespace PLCInterface
         static int SortChannel(DongaResult x, DongaResult y)
         {
             return y.CHANNEL - x.CHANNEL;
+        }
+
+        // 1.6.2 : Donga 경로에 OK, NG 이미지 생성
+        private void DongaCopyAndMakeFile(int reportChannel)
+        {
+            try
+            {
+                // C:\DONGA\data\설정모델명\Trigger(On신호)시간으로 파일명 생성 \카메라NO\OK또는NG\기준시간 파일저장
+                string sourcePath = GlobalInfo.DongaResults[reportChannel].IMAGEPATH;
+                string dongaModelDataPath = $"{GlobalInfo.DongaDataPath}data/{GlobalInfo.DongaResults[reportChannel].PART_NO}/";
+                Utility.MakeFolder(dongaModelDataPath); // 모델명 폴더 생성
+                string triggerPath = $"{dongaModelDataPath}{GlobalInfo.DongaTriggerTime}/";
+                Utility.MakeFolder(triggerPath); // Trigger 시간 폴더 생성
+                string camPath = $"{triggerPath}Cam{GlobalInfo.DongaResults[reportChannel].CAMERA_NO}/";
+                Utility.MakeFolder(camPath); // Camx 폴더 생성
+                string result = (GlobalInfo.DongaResults[reportChannel].OK_YN == "N") ? "NG" : "OK";
+                string resultPath = $"{camPath}{result}/";
+                Utility.MakeFolder(resultPath); // result 폴더 생성
+
+                if (File.Exists(sourcePath))
+                {
+                    string destinationPath = $"{resultPath}{Path.GetFileName(sourcePath)}";
+                    File.Copy(sourcePath, destinationPath);
+                    Logger.Info($"[{sourcePath}] is copied to [$[{destinationPath}]");
+                }
+                else
+                    Logger.Error($"DongaModelDataPath is not exists. \n## DongaModelDataPath : {sourcePath}");
+            }
+            catch (Exception ex)
+            {
+                Logger.Error($"Exception on {System.Reflection.MethodBase.GetCurrentMethod().Name} >>> {ex.Message}\r\n{ex.StackTrace}");
+            }
         }
     }
 }

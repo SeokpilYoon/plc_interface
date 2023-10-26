@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Configuration;
+using System.IO;
 
 namespace PLCInterface
 {
@@ -14,6 +15,8 @@ namespace PLCInterface
 
         // 동아엘텍
         public static bool UseDongaScenario { get; set; } = false;
+        public static string DongaDataPath { get; set; } = @"D:/DONGA/";
+        public static string DongaTriggerTime { get; set; } = string.Empty;
         public static bool UseAuroraTowerLamp { get; set; } = false;
         public static bool USBLamp_AlarmBuzzer { get; set; } = false;
         public static bool USBLamp_AlarmRed { get; set; } = false;
@@ -45,6 +48,7 @@ namespace PLCInterface
                 }
 
                 UseDongaScenario = (ConfigurationManager.AppSettings["UseDongaScenario"] ?? "FALSE").ToUpper().Equals("TRUE");
+                DongaDataPath = ConfigurationManager.AppSettings["DongaDataPath"] ?? string.Empty;
                 UseAuroraTowerLamp = (ConfigurationManager.AppSettings["UseAuroraTowerLamp"] ?? "FALSE").ToUpper().Equals("TRUE");
                 USBLamp_AlarmBuzzer = (ConfigurationManager.AppSettings["USBLamp_AlarmBuzzer"] ?? "FALSE").ToUpper().Equals("TRUE");
                 USBLamp_AlarmRed = (ConfigurationManager.AppSettings["USBLamp_AlarmRed"] ?? "FALSE").ToUpper().Equals("TRUE");
@@ -59,6 +63,13 @@ namespace PLCInterface
                 OracleTable = ConfigurationManager.AppSettings["OracleTable"] ?? string.Empty;
                 OracleColumn_LINE_CD = ConfigurationManager.AppSettings["OracleColumn_LINE_CD"] ?? string.Empty;
                 DongaResults = new List<DongaResult>();
+
+                // Donga 폴더 추가
+                if (UseDongaScenario)
+                {
+                    Utility.MakeFolder($"{DongaDataPath}");
+                    Utility.MakeFolder($"{DongaDataPath}data/");
+                }
             }
             catch (Exception ex)
             {

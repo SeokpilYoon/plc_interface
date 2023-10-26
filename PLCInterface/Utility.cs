@@ -1,5 +1,6 @@
 ﻿using Oracle.ManagedDataAccess.Client;
 using System;
+using System.IO;
 
 namespace PLCInterface
 {
@@ -38,6 +39,14 @@ namespace PLCInterface
             catch (Exception ex)
             {
                 Logger.Error($"Exception on {System.Reflection.MethodBase.GetCurrentMethod().Name} >>> {ex.Message}\r\n{ex.StackTrace}");
+            }
+        }
+
+        public static void MakeFolder(string path)
+        {
+            if (!Directory.Exists(path))
+            {
+                Directory.CreateDirectory(path);
             }
         }
     }
