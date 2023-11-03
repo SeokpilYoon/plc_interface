@@ -16,7 +16,7 @@ namespace PLCInterface
 {
     class MainWindowViewModel : ViewModelBase
     {
-        private static string ProgramVersion { get; set; } = "0.7.3"; // 동아엘텍 Aurora USB 경광등 추가
+        private static string ProgramVersion { get; set; } = "0.7.4"; // 동아엘텍 상위보고 관련 수정
 
         [DllImport("kernel32")]
         public static extern Int32 GetCurrentProcessId();

@@ -68,7 +68,6 @@ namespace PLCInterface
                 if (UseDongaScenario)
                 {
                     Utility.MakeFolder($"{DongaDataPath}");
-                    Utility.MakeFolder($"{DongaDataPath}data/");
                 }
             }
             catch (Exception ex)

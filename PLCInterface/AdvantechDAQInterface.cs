@@ -146,7 +146,10 @@ namespace PLCInterface
                         {
                             TriggerStatus = true;
                             ReportTimer.Enabled = false;
+                            Thread.Sleep(50);
+                            ReportTimer.Enabled = true;
                             GlobalInfo.DongaResults.Clear();
+                            auroraUSBTowerLampInterface.SetLed(false, false, false, false, false); // Trigger 시작 시 LEDLamp 꺼지도록 수정
 
                             // Trigger 시간 폴더 생성
                             GlobalInfo.DongaTriggerTime = DateTime.Now.ToString("yyyyMMddHHmmss");
@@ -192,7 +195,7 @@ namespace PLCInterface
                     if (triggerOffData == 1)
                     {
                         TriggerOffData = true;
-                        Logger.Debug("Pooling 'TRIGGER_Off_SensorOn' message from DIO");
+                        //Logger.Debug("Pooling 'TRIGGER_Off_SensorOn' message from DIO");
                     }
                     if (triggerOffData == 0)
                     {
@@ -238,7 +241,7 @@ namespace PLCInterface
                             }
                             Logger.Debug("Pooling 'TRIGGER_Off' message from DIO");
 
-                            ReportTimer.Enabled = true;
+                            //ReportTimer.Enabled = true;
                         }
                     }
                 }
@@ -411,50 +414,61 @@ namespace PLCInterface
 
         private void ReportTimerHandler(object source, ElapsedEventArgs e)
         {
-            if (GlobalInfo.DongaResults.Count == GlobalInfo.NumEnabledChannel)
+            try
             {
-                ReportTimer.Enabled = false;
-                int reportChannel = 0;
-
-                GlobalInfo.DongaResults.Sort(SortChannel);
-                //List<DongaResult> dongaResults = new List<DongaResult>();
-                //dongaResults = GlobalInfo.DongaResults.OrderBy(t => t.CHANNEL).ToList();
-
-                for (int i = 0; i < GlobalInfo.DongaResults.Count; i++)
+                if (GlobalInfo.DongaResults.Count == GlobalInfo.NumEnabledChannel)
                 {
-                    if (GlobalInfo.DongaResults[i].OK_YN == "N")
+                    Logger.Info($"Received Data From UI (Count) : {GlobalInfo.DongaResults.Count}, [GlobalInfo.NumEnabledChannel] : {GlobalInfo.NumEnabledChannel}");
+                    ReportTimer.Enabled = false;
+                    int reportChannel = 0;
+
+                    GlobalInfo.DongaResults.Sort(SortChannel);
+                    //List<DongaResult> dongaResults = new List<DongaResult>();
+                    //dongaResults = GlobalInfo.DongaResults.OrderBy(t => t.CHANNEL).ToList();
+
+                    for (int i = 0; i < GlobalInfo.DongaResults.Count; i++)
                     {
-                        reportChannel = i;
-                        break;
+                        if (GlobalInfo.DongaResults[i].OK_YN == "N")
+                        {
+                            reportChannel = i;
+                            break;
+                        }
                     }
-                }
 
-                DongaCopyAndMakeFile(reportChannel);
+                    string dongaImagePath = DongaCopyAndMakeFile(reportChannel);
 
-                Utility.SendOracleDB(GlobalInfo.DongaResults[reportChannel].PART_NO, GlobalInfo.DongaResults[reportChannel].LINE_CD, GlobalInfo.DongaResults[reportChannel].TEST_DT, GlobalInfo.DongaResults[reportChannel].OK_YN, GlobalInfo.DongaResults[reportChannel].IMAGEPATH, GlobalInfo.DongaResults[reportChannel].CAMERA_NO);
-                if (GlobalInfo.UseAuroraTowerLamp == true)
-                {
-                    if (GlobalInfo.DongaResults[reportChannel].OK_YN == "Y")
-                        auroraUSBTowerLampInterface.SetLed(false, false, true, false, false);
-                    else
-                        auroraUSBTowerLampInterface.SetLed(GlobalInfo.USBLamp_AlarmRed, GlobalInfo.USBLamp_AlarmYellow, false, GlobalInfo.USBLamp_AlarmBuzzer, false);
+                    Utility.SendOracleDB(GlobalInfo.DongaResults[reportChannel].PART_NO, GlobalInfo.DongaResults[reportChannel].LINE_CD, GlobalInfo.DongaResults[reportChannel].TEST_DT, GlobalInfo.DongaResults[reportChannel].OK_YN, dongaImagePath, GlobalInfo.DongaResults[reportChannel].CAMERA_NO);
+
+                    if (GlobalInfo.UseAuroraTowerLamp == true)
+                    {
+                        if (GlobalInfo.DongaResults[reportChannel].OK_YN == "Y")
+                            auroraUSBTowerLampInterface.SetLed(false, false, true, false, false);
+                        else
+                            auroraUSBTowerLampInterface.SetLed(GlobalInfo.USBLamp_AlarmRed, GlobalInfo.USBLamp_AlarmYellow, false, GlobalInfo.USBLamp_AlarmBuzzer, false);
+                    }
+                    GlobalInfo.DongaResults.Clear();
                 }
-                GlobalInfo.DongaResults.Clear();
             }
+            catch (Exception ex)
+            {
+                Logger.Error($"Exception on {System.Reflection.MethodBase.GetCurrentMethod().Name} >>> {ex.Message}\r\n{ex.StackTrace}");
+            }
+            finally { }            
         }
         static int SortChannel(DongaResult x, DongaResult y)
         {
-            return y.CHANNEL - x.CHANNEL;
+            return x.CHANNEL - y.CHANNEL;
         }
 
         // 1.6.2 : Donga 경로에 OK, NG 이미지 생성
-        private void DongaCopyAndMakeFile(int reportChannel)
+        private string DongaCopyAndMakeFile(int reportChannel)
         {
+            string destinationPath = string.Empty;
             try
             {
                 // C:\DONGA\data\설정모델명\Trigger(On신호)시간으로 파일명 생성 \카메라NO\OK또는NG\기준시간 파일저장
                 string sourcePath = GlobalInfo.DongaResults[reportChannel].IMAGEPATH;
-                string dongaModelDataPath = $"{GlobalInfo.DongaDataPath}data/{GlobalInfo.DongaResults[reportChannel].PART_NO}/";
+                string dongaModelDataPath = $"{GlobalInfo.DongaDataPath}{GlobalInfo.DongaResults[reportChannel].PART_NO}/";
                 Utility.MakeFolder(dongaModelDataPath); // 모델명 폴더 생성
                 string triggerPath = $"{dongaModelDataPath}{GlobalInfo.DongaTriggerTime}/";
                 Utility.MakeFolder(triggerPath); // Trigger 시간 폴더 생성
@@ -466,16 +480,19 @@ namespace PLCInterface
 
                 if (File.Exists(sourcePath))
                 {
-                    string destinationPath = $"{resultPath}{Path.GetFileName(sourcePath)}";
+                    destinationPath = $"{resultPath}{Path.GetFileName(sourcePath)}";
                     File.Copy(sourcePath, destinationPath);
                     Logger.Info($"[{sourcePath}] is copied to [$[{destinationPath}]");
                 }
                 else
                     Logger.Error($"DongaModelDataPath is not exists. \n## DongaModelDataPath : {sourcePath}");
+
+                return destinationPath;
             }
             catch (Exception ex)
             {
                 Logger.Error($"Exception on {System.Reflection.MethodBase.GetCurrentMethod().Name} >>> {ex.Message}\r\n{ex.StackTrace}");
+                return "";
             }
         }
     }
