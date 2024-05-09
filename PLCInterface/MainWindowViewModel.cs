@@ -16,7 +16,7 @@ namespace PLCInterface
 {
     class MainWindowViewModel : ViewModelBase
     {
-        private static string ProgramVersion { get; set; } = "0.7.4"; // 동아엘텍 상위보고 관련 수정
+        private static string ProgramVersion { get; set; } = "0.7.5"; // 주기적 Connect Reset 추가
 
         [DllImport("kernel32")]
         public static extern Int32 GetCurrentProcessId();
@@ -25,6 +25,7 @@ namespace PLCInterface
         CommonInterface plc;
         private System.Timers.Timer PlcInterfaceTimer = null;
         private System.Timers.Timer PlcAliveTimer = null;
+        private System.Timers.Timer ConnectResetTimer = null;
 
         private string plcStatusColor = string.Empty;
         public string PlcStatusColor
@@ -134,6 +135,18 @@ namespace PLCInterface
                 usbTesterButtonCommand = value;
             }
         }
+        private ICommand manualTriggerButtonCommand;
+        public ICommand ManualTriggerButtonCommand
+        {
+            get
+            {
+                return manualTriggerButtonCommand;
+            }
+            set
+            {
+                manualTriggerButtonCommand = value;
+            }
+        }
 
         // SubTitle
         private string mainTitle = string.Empty;
@@ -220,6 +233,7 @@ namespace PLCInterface
             StartInterfaceCommand = new RelayCommand(StartInterfaceCommandExe, param => this.CanExecute);
             StopInterfaceCommand = new RelayCommand(StopInterfaceCommandExe, param => this.CanExecute);
             UsbTesterButtonCommand = new RelayCommand(UsbTesterButtonCommandExe, param => this.CanExecute);
+            ManualTriggerButtonCommand = new RelayCommand(ManualTriggerButtonCommandExe, param => this.CanExecute);
 
             UiWebStatusColor = new ObservableCollection<string>();
 
@@ -256,6 +270,17 @@ namespace PLCInterface
             }
             else
                 AliveDevice = string.Empty;
+
+            if ((ConfigurationManager.AppSettings["UsePeriodicConnectReset"] ?? "FALSE").ToUpper().Equals("TRUE"))
+            {
+                ConnectResetTimer = new System.Timers.Timer
+                {
+                    Interval = 60000,  // 1분
+                    AutoReset = true,
+                    Enabled = true
+                };
+                ConnectResetTimer.Elapsed += new ElapsedEventHandler(ConnectResetTimerHandler);
+            }
 
             // 0.7.2 : USB 경광등 테스트
             if (GlobalInfo.UseAuroraTowerLamp)
@@ -353,6 +378,21 @@ namespace PLCInterface
                 else
                     flash2 = 0;
                 write_tower_status();
+            }
+            catch (Exception ex)
+            {
+                Logger.Error($"Exception on {System.Reflection.MethodBase.GetCurrentMethod().Name} >>> {ex.Message}\r\n{ex.StackTrace}");
+            }
+            finally { }
+        }
+
+        int ValueOn = 0;
+        private void ManualTriggerButtonCommandExe(object obj)
+        {
+            try
+            {
+                plc.SendManualTrigger("TriggerAddress", ValueOn);
+                ValueOn = (ValueOn == 0) ? 1 : 0;
             }
             catch (Exception ex)
             {
@@ -514,6 +554,47 @@ namespace PLCInterface
             {
                 Logger.Error($"Exception on {System.Reflection.MethodBase.GetCurrentMethod().Name} >>> {ex.Message}\r\n{ex.StackTrace}");
                 InfoMessage = "Error while reading & operating PLC values";
+            }
+        }
+
+        private void ConnectResetTimerHandler(object source, ElapsedEventArgs e)
+        {
+            try
+            {
+                DateTime nowTime = DateTime.Now;
+                int checkHour = Convert.ToInt32(ConfigurationManager.AppSettings["ConnectResetHour"] ?? "7");
+                int checkMinute = Convert.ToInt32(ConfigurationManager.AppSettings["ConnectResetMinute"] ?? "0");
+
+                if (nowTime.Hour == checkHour && nowTime.Minute == checkMinute)
+                {
+                    Logger.Info($"Periodic Connect Reset : {nowTime.Hour}");
+                    // StopInterfaceCommandExe
+                    if (plc.IsAlive)
+                    {
+                        // true가 되기까지 기다렸다가, false로 세팅
+                        int loopCount = 0;
+                        while (!PlcInterfaceTimer.Enabled)
+                        {
+                            Logger.Info("Stop Retry");
+                            Thread.Sleep(100);
+                            if (loopCount > 5)
+                                break;
+                            loopCount++;
+                        }
+                    }
+                    PlcInterfaceTimer.Enabled = false;
+                    PlcAliveTimer.Enabled = false;
+
+                    Thread.Sleep(100);
+
+                    // StartInterfaceCommandExe
+                    InfoMessage = plc.StartInterface();
+                    SetConnectionStatus();
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.Error($"Exception on {System.Reflection.MethodBase.GetCurrentMethod().Name} >>> {ex.Message}\r\n{ex.StackTrace}");
             }
         }
 
