@@ -131,6 +131,15 @@
     <Reference Include="System.Xaml">
       <RequiredTargetFramework>4.0</RequiredTargetFramework>
     </Reference>
+    <Reference Include="VagabondK.Protocols.Abstractions, Version=1.0.6.0, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>..\packages\VagabondK.Protocols.Abstractions.1.0.6\lib\net461\VagabondK.Protocols.Abstractions.dll</HintPath>
+    </Reference>
+    <Reference Include="VagabondK.Protocols.Channels, Version=1.0.11.0, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>..\packages\VagabondK.Protocols.Channels.1.0.11\lib\net461\VagabondK.Protocols.Channels.dll</HintPath>
+    </Reference>
+    <Reference Include="VagabondK.Protocols.LSElectric, Version=1.1.11.0, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>..\packages\VagabondK.Protocols.LSElectric.1.1.11\lib\net461\VagabondK.Protocols.LSElectric.dll</HintPath>
+    </Reference>
     <Reference Include="WindowsBase" />
     <Reference Include="PresentationCore" />
     <Reference Include="PresentationFramework" />
@@ -145,6 +154,7 @@
     <Compile Include="AuroraUSBTowerLampInterface.cs" />
     <Compile Include="CommonInterface.cs" />
     <Compile Include="GlobalInfo.cs" />
+    <Compile Include="LSElectricInterface.cs" />
     <Compile Include="ModbusInterface.cs" />
     <Compile Include="HttpMessage.cs" />
     <Compile Include="HttpServer.cs" />

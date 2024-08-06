@@ -16,7 +16,7 @@ namespace PLCInterface
 {
     class MainWindowViewModel : ViewModelBase
     {
-        private static string ProgramVersion { get; set; } = "0.7.5"; // 주기적 Connect Reset 추가
+        private static string ProgramVersion { get; set; } = "0.8.0"; // LS Electric 추가
 
         [DllImport("kernel32")]
         public static extern Int32 GetCurrentProcessId();
@@ -225,8 +225,12 @@ namespace PLCInterface
                 plc = new ModbusInterface();
             else if (plcType == 3)
                 plc = new AdvantechDAQInterface();
-            else if (plcType == 4)
-                plc = new ADLinkDIOInterface(); // LGD에 3으로 배포되었으나 4로 변경
+            //else if (plcType == 4) // Siemens
+            //    plc = new AdvantechDAQInterface();
+            else if (plcType == 5)
+                plc = new LSElectricInterface();
+            else if (plcType == 6)
+                plc = new ADLinkDIOInterface(); // LGD에 3으로 배포되었으나 4로 변경 --> 6으로 변경
             else
                 plc = new MelsecInterface();
 

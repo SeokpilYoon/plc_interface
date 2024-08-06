@@ -1,7 +1,9 @@
-﻿using System;
+﻿using Newtonsoft.Json.Linq;
+using System;
 using System.Collections.Generic;
 using System.Configuration;
 using System.IO;
+using System.Windows.Input;
 
 namespace PLCInterface
 {
@@ -32,6 +34,9 @@ namespace PLCInterface
         public static string OracleTable { get; set; } = string.Empty;
         public static string OracleColumn_LINE_CD { get; set; } = string.Empty;
         public static List<DongaResult> DongaResults;
+
+        public static string LSElectricIP { get; set; } = "127.0.0.1";
+        public static int LSElectricPort { get; set; } = 1;
 
         public static bool InitializeGlobalInfo()
         {
@@ -69,6 +74,9 @@ namespace PLCInterface
                 {
                     Utility.MakeFolder($"{DongaDataPath}");
                 }
+
+                LSElectricIP = ConfigurationManager.AppSettings["LSElectricIP"] ?? "127.0.0.1";
+                LSElectricPort = Convert.ToInt32(ConfigurationManager.AppSettings["LSElectricPort"] ?? "1");
             }
             catch (Exception ex)
             {

@@ -121,18 +121,23 @@ namespace PLCInterface
                     plc = new ModbusInterface();
                 else if (plcType == 3)
                     plc = new AdvantechDAQInterface();
-                else if (plcType == 4)
-                    plc = new ADLinkDIOInterface(); // LGD에 3으로 배포되었으나 4로 변경
+                //else if (plcType == 4) // Siemens
+                //    plc = new AdvantechDAQInterface();
+                else if (plcType == 5)
+                    plc = new LSElectricInterface();
+                else if (plcType == 6)
+                    plc = new ADLinkDIOInterface(); // LGD에 3으로 배포되었으나 4로 변경 --> 6으로 변경
                 else
                     plc = new MelsecInterface();
 
                 plc.StartInterface();
-                
-                /*if (GlobalInfo.UseAuroraTowerLamp == true)
+
+                AuroraUSBTowerLampInterface auroraUSBTowerLampInterface = null;
+                if (GlobalInfo.UseAuroraTowerLamp == true)
                 {
-                    AuroraUSBTowerLampInterface auroraUSBTowerLampInterface = new AuroraUSBTowerLampInterface();
+                    auroraUSBTowerLampInterface = new AuroraUSBTowerLampInterface();
                     auroraUSBTowerLampInterface.StartInterface();
-                }*/
+                }
 
                 while (true)
                 {
@@ -147,14 +152,16 @@ namespace PLCInterface
                         Logger.Trace($"{jsonText}");
                         try
                         {
-                            /*if (request.Url.LocalPath == "/USBLamp")
+                            if (request.Url.LocalPath == "/USBLamp")
                             {
                                 USBLamp uSBLamp = JsonConvert.DeserializeObject<USBLamp>(jsonText);
                                 if (GlobalInfo.UseAuroraTowerLamp == true)
+                                {
+                                    Logger.Debug("Get USBLamp Message from http");
                                     auroraUSBTowerLampInterface.SetLed(uSBLamp.Red, uSBLamp.Yellow, uSBLamp.Green, uSBLamp.Buzzer, uSBLamp.Blink);
+                                }
                             }
-                            else*/
-                            if (request.Url.LocalPath == "/Donga_Result")
+                            else if (request.Url.LocalPath == "/Donga_Result")
                             {
                                 if (GlobalInfo.UseOracleDB == true && GlobalInfo.UseDongaScenario == true)
                                 {
