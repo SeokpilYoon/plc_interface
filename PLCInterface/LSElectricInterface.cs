@@ -35,27 +35,42 @@ namespace PLCInterface
                 int interfaceIndex = 0;
                 ReadDevices = new List<PlcVariable>();
 
-                int modelQty = Convert.ToInt32(ConfigurationManager.AppSettings["ModelQty"] ?? "1");
-                string deviceModel = ConfigurationManager.AppSettings["ModelStartAddress"] ?? string.Empty;
-                
-                if (modelQty > 1 && deviceModel.Length > 1)
+                int j;
+                for (j = 0; j < GlobalInfo.NumChannel; j++)
                 {
-                    string prefix = Regex.Replace(deviceModel, @"[^a-zA-Z]", "");
-                    int number = Convert.ToInt32(Regex.Replace(deviceModel, @"[^0-9]", ""));
-
-                    for (int i = 0; i < modelQty; i++)
+                    int modelQty = Convert.ToInt32(ConfigurationManager.AppSettings["ModelQty"] ?? "1");
+                    string deviceModel = ConfigurationManager.AppSettings["ModelStartAddress"] ?? string.Empty;
+                    if (j > 0)
                     {
-                        var plcVar = new PlcVariable(interfaceIndex++, $"Model{i + 1}", $"{prefix}{number++}");
-                        ReadDevices.Add(plcVar);
+                        modelQty = Convert.ToInt32(ConfigurationManager.AppSettings[$"ModelQty{j + 1}"] ?? "1");
+                        deviceModel = ConfigurationManager.AppSettings[$"ModelStartAddress{j + 1}"] ?? string.Empty;
+                    }
+                    if (modelQty > 1 && deviceModel.Length > 1)
+                    {
+                        string prefix = Regex.Replace(deviceModel, @"[^a-zA-Z]", "");
+                        int number = Convert.ToInt32(Regex.Replace(deviceModel, @"[^0-9]", ""));
+
+                        for (int i = 0; i < modelQty; i++)
+                        {
+                            var plcVar = new PlcVariable(interfaceIndex++, $"Model{i + 1}", $"{prefix}{number++}", j + 1);
+                            ReadDevices.Add(plcVar);
+                        }
                     }
                 }
 
-                CheckPlcAddress(interfaceIndex++, "TriggerAddress", true);
-                CheckPlcAddress(interfaceIndex++, "ReportTriggerAddress", true);
-                CheckPlcAddress(interfaceIndex++, "MbbTriggerAddress", true);
-                CheckPlcAddress(interfaceIndex++, "ReadyAddress", true);
-                CheckPlcAddress(interfaceIndex++, "Word1ModelAddress", true);
-                CheckPlcAddress(interfaceIndex++, "Word2ModelAddress", true);
+                for (j = 0; j < GlobalInfo.NumChannel; j++)
+                {
+                    CheckPlcAddress(interfaceIndex++, "TriggerAddress", true, j + 1);
+                    CheckPlcAddress(interfaceIndex++, "MbbTriggerAddress", true, j + 1);
+                    CheckPlcAddress(interfaceIndex++, "ReadyAddress", true, j + 1);
+                    CheckPlcAddress(interfaceIndex++, "Word1ModelAddress", true, j + 1);
+                    CheckPlcAddress(interfaceIndex++, "Word2ModelAddress", true, j + 1);
+                    CheckPlcAddress(interfaceIndex++, "ESMIModelChangeRequestAddress", true, j + 1);
+                    CheckPlcAddress(interfaceIndex++, "ModeSelectAddress", true, j + 1);
+                    CheckPlcAddress(interfaceIndex++, "CommErrorAddress", true, j + 1);
+                    CheckPlcAddress(interfaceIndex++, "ESMIModelNumberAddress", true, j + 1);
+                    CheckPlcAddress(interfaceIndex++, "NestNumberAddress", true, j + 1);
+                }
                 #endregion Read Configuration
 
                 #region Write Configuration
@@ -63,14 +78,20 @@ namespace PLCInterface
                 interfaceIndex = 0;
                 WriteDevices = new List<PlcVariable>();
 
-                CheckPlcAddress(interfaceIndex++, "AnomalyOnAddress", false);
-                CheckPlcAddress(interfaceIndex++, "AnomalyOffAddress", false);
+                for (j = 0; j < GlobalInfo.NumChannel; j++)
+                {
+                    CheckPlcAddress(interfaceIndex++, "AnomalyOnAddress", false, j+1);
+                    CheckPlcAddress(interfaceIndex++, "AnomalyOffAddress", false, j+1);
+                }
                 CheckPlcAddress(interfaceIndex++, "AliveAddress", false);
                 CheckPlcAddress(interfaceIndex++, "CaptureCompleteAddress", false);
+                CheckPlcAddress(interfaceIndex++, "BusyAddress", false);
+                CheckPlcAddress(interfaceIndex++, "ESMIModelChangeCompleteAddress", false);
                 CheckPlcAddress(interfaceIndex++, "ErrorAddress", false);
+                CheckPlcAddress(interfaceIndex++, "DetectReadyAddress", false);
+                CheckPlcAddress(interfaceIndex++, "AliveAddress", false);
                 CheckPlcAddress(interfaceIndex++, "LearnModeAddress", false);
-                CheckPlcAddress(interfaceIndex++, "NGCodeAddress", false);
-                CheckPlcAddress(interfaceIndex++, "AlignNgOnAddress", false); // V1.5.1 : Align NG Write 추가
+
                 #endregion Write Configuration
 
                 GetDevicesAddressRandom();
@@ -211,14 +232,18 @@ namespace PLCInterface
             finally { }
         }
 
-        private void CheckPlcAddress(int index, string appSettingName, bool isRead = true)
+        private void CheckPlcAddress(int index, string appSettingName, bool isRead = true, int ch = 1)
         {
             try
             {
-                string device = ConfigurationManager.AppSettings[appSettingName] ?? string.Empty;
-                if (device != string.Empty && device != "")
+                string appSettingNameCH = appSettingName;
+                if (ch > 1)
+                    appSettingNameCH = $"{appSettingNameCH}{ch}";
+
+                string device = ConfigurationManager.AppSettings[appSettingNameCH] ?? string.Empty;
+                if (device != string.Empty)
                 {
-                    var plcVar = new PlcVariable(index, appSettingName, device);
+                    var plcVar = new PlcVariable(index, appSettingName, device, ch);
                     if (isRead)
                     {
                         ReadDevices.Add(plcVar);
@@ -234,7 +259,7 @@ namespace PLCInterface
                 Logger.Error($"Exception on {System.Reflection.MethodBase.GetCurrentMethod().Name} >>> {ex.Message}\r\n{ex.StackTrace}");
             }
             finally { }
-        }
+        }        
 
         public int ReadFromPLCRandom(List<DeviceVariable> devices, int size, ref int[] values)
         {

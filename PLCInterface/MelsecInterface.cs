@@ -99,8 +99,11 @@ namespace PLCInterface
                 interfaceIndex = 0;
                 WriteDevices = new List<PlcVariable>();
 
-                CheckPlcAddress(interfaceIndex++, "AnomalyOnAddress", false);
-                CheckPlcAddress(interfaceIndex++, "AnomalyOffAddress", false);
+                for (j = 0; j < GlobalInfo.NumChannel; j++)
+                {
+                    CheckPlcAddress(interfaceIndex++, "AnomalyOnAddress", false, j + 1);
+                    CheckPlcAddress(interfaceIndex++, "AnomalyOffAddress", false, j + 1);
+                }
                 CheckPlcAddress(interfaceIndex++, "AliveAddress", false);
                 CheckPlcAddress(interfaceIndex++, "CaptureCompleteAddress", false);
                 CheckPlcAddress(interfaceIndex++, "BusyAddress", false);
