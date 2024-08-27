@@ -153,7 +153,9 @@
     <Compile Include="AdvantechDAQInterface.cs" />
     <Compile Include="AuroraUSBTowerLampInterface.cs" />
     <Compile Include="CommonInterface.cs" />
+    <Compile Include="FastechEziIoInterface.cs" />
     <Compile Include="GlobalInfo.cs" />
+    <Compile Include="LIB_EziMOTIONPlusE.cs" />
     <Compile Include="LSElectricInterface.cs" />
     <Compile Include="ModbusInterface.cs" />
     <Compile Include="HttpMessage.cs" />
@@ -161,6 +163,7 @@
     <Compile Include="Logger.cs" />
     <Compile Include="MainWindowViewModel.cs" />
     <Compile Include="MelsecInterface.cs" />
+    <Compile Include="MOTION_DEFINE_PlusE.cs" />
     <Compile Include="PlcReadInfo.cs" />
     <Compile Include="RelayCommand.cs" />
     <Compile Include="Utility.cs" />
@@ -227,7 +230,8 @@
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <PropertyGroup>
     <PreBuildEvent>copy "$(SolutionDir)PLCInterface\lib\Automation.BDaq4.dll" "$(TargetDir)"
-copy "$(SolutionDir)PLCInterface\lib\aurora_usb_tower_single.dll" "$(TargetDir)"</PreBuildEvent>
+copy "$(SolutionDir)PLCInterface\lib\aurora_usb_tower_single.dll" "$(TargetDir)"
+copy "$(SolutionDir)PLCInterface\lib\EziMOTIONPlusE.dll" "$(TargetDir)"</PreBuildEvent>
   </PropertyGroup>
   <Import Project="..\packages\System.Text.Json.6.0.1\build\System.Text.Json.targets" Condition="Exists('..\packages\System.Text.Json.6.0.1\build\System.Text.Json.targets')" />
   <Target Name="EnsureNuGetPackageBuildImports" BeforeTargets="PrepareForBuild">

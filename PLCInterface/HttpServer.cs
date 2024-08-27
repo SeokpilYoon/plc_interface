@@ -127,6 +127,8 @@ namespace PLCInterface
                     plc = new LSElectricInterface();
                 else if (plcType == 6)
                     plc = new ADLinkDIOInterface(); // LGD에 3으로 배포되었으나 4로 변경 --> 6으로 변경
+                else if (plcType == 7)
+                    plc = new FastechEziIoInterface();
                 else
                     plc = new MelsecInterface();
 
