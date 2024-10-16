@@ -16,7 +16,7 @@ namespace PLCInterface
 {
     class MainWindowViewModel : ViewModelBase
     {
-        private static string ProgramVersion { get; set; } = "0.8.1"; // Ezi-IO 추가
+        private static string ProgramVersion { get; set; } = "0.8.2"; // Ezi-IO Reconnect 기능 추가
 
         [DllImport("kernel32")]
         public static extern Int32 GetCurrentProcessId();

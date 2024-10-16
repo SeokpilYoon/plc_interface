@@ -141,52 +141,79 @@ namespace PLCInterface
 
         static bool Connect(int nCommType, int nBdID)
         {
-            string ipstring = ConfigurationManager.AppSettings["EziIO_IP"] ?? "192.168.0.2";
-            string[] address = ipstring.Split('.'); // ?modeltype=x
-            byte[] num = new byte[4];
-
-            for (int i = 0; i < address.Length; i++)
-            {
-                num[i] = (byte) System.Convert.ToInt16(address[i]);
-            }
-            
-            IPAddress ip = new IPAddress(num);
             bool bSuccess = true;
 
-            // Connection
-            switch (nCommType)
+            try
             {
-                case TCP:
-                    // TCP Connection
-                    if (EziMOTIONPlusELib.FAS_ConnectTCP(ip, nBdID) == false)
-                    {
-                        Console.WriteLine("TCP Connection Fail!");
+                string ipstring = ConfigurationManager.AppSettings["EziIO_IP"] ?? "192.168.0.2";
+                string[] address = ipstring.Split('.'); // ?modeltype=x
+                byte[] num = new byte[4];
+
+                for (int i = 0; i < address.Length; i++)
+                {
+                    num[i] = (byte)System.Convert.ToInt16(address[i]);
+                }
+
+                IPAddress ip = new IPAddress(num);
+
+                // Connection
+                switch (nCommType)
+                {
+                    case TCP:
+                        // TCP Connection
+                        if (EziMOTIONPlusELib.FAS_ConnectTCP(ip, nBdID) == false)
+                        {
+                            Logger.Info($"[FastechEziIO] TCP Connection Fail!");
+                            bSuccess = false;
+                        }
+                        break;
+
+                    case UDP:
+                        // UDP Connection
+                        if (EziMOTIONPlusELib.FAS_Connect(ip, nBdID) == false)
+                        {
+                            Logger.Info($"[FastechEziIO] UDP Connection Fail!");
+                            bSuccess = false;
+                        }
+                        break;
+
+                    default:
+                        //Console.WriteLine("[FastechEziIO] Wrong communication type.");
                         bSuccess = false;
-                    }
-                    break;
 
-                case UDP:
-                    // UDP Connection
-                    if (EziMOTIONPlusELib.FAS_Connect(ip, nBdID) == false)
-                    {
-                        Console.WriteLine("UDP Connection Fail!");
-                        bSuccess = false;
-                    }
-                    break;
+                        break;
+                }
 
-                default:
-                    Console.WriteLine("Wrong communication type.");
-                    bSuccess = false;
-
-                    break;
+                if (bSuccess)
+                    Logger.Info($"[FastechEziIO] Connected successfully.");
             }
-
-            if (bSuccess)
-                Console.WriteLine("Connected successfully.");
-
+            catch (Exception ex)
+            {
+                Logger.Error($"Exception on {System.Reflection.MethodBase.GetCurrentMethod().Name} >>> {ex.Message}\r\n{ex.StackTrace}");
+                bSuccess = false;
+                return bSuccess;
+            }
+            finally { }
             return bSuccess;
         }
 
+        static bool CheckDriveInfo(int nBdID)
+        {
+            byte byType = 0;
+            string version = "";
+            int nRtn;
+
+            // Read Drive's information
+            nRtn = EziMOTIONPlusELib.FAS_GetSlaveInfo(nBdID, ref byType, ref version);
+            if (nRtn != EziMOTIONPlusELib.FMM_OK)
+            {
+                Logger.Info($"[FastechEziIO] Can't read DIO board status.");
+                return false;
+            }
+            Logger.Info($"[FastechEziIO] Board ID {nBdID} : TYPE= {byType}, Version= {version}");
+
+            return true;
+        }
 
         public override int CloseConnection()
         {
@@ -210,6 +237,31 @@ namespace PLCInterface
         {
             try
             {
+                bool bCloseSuccess = true;
+                // 0.8.2 : DIO 보드 전원 살아있는지 확인 후 재연결                
+                if (CheckDriveInfo(nBdID) == false) // Check Drive information
+                {
+                    try
+                    {
+                        EziMOTIONPlusELib.FAS_Close(nBdID); // Connection Close
+                    }
+                    catch
+                    {
+                        Logger.Info($"[FastechEziIO] Connection Close 실패");
+                        bCloseSuccess = false;
+                    }
+
+                    // PLC 재연결
+                    if (Connect(TCP, nBdID) && bCloseSuccess)
+                    {
+                        Logger.Info($"[FastechEziIO] Reconnect 성공");
+                    }
+                    else
+                    {
+                        Logger.Info($"[FastechEziIO] Reconnect 실패");
+                    }
+                }
+
                 if (ReadFromPLCRandom(ref readValues) != 0)
                 {
                     //Logger.Error($"PLC read error on {System.Reflection.MethodBase.GetCurrentMethod().Name}. device:[{DeviceRandomToRead.Replace("\n", "/")}]");
@@ -256,6 +308,7 @@ namespace PLCInterface
                         PreviousRead = string.Join(" ", readValues);
                         Logger.Trace(PreviousRead);
                     }
+
                     return $"PLC Read Success [{string.Join(" ", readValues)}]";
                 }
             }
