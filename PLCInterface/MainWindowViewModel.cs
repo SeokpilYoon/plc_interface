@@ -204,113 +204,121 @@ namespace PLCInterface
 
         public MainWindowViewModel()
         {
-            Logger.Info($"★★★ Anomaly Detection PLC Communicator Version: [{ProgramVersion}] ★★★");
-
-            // 멀티프로그램 허용하지 않았는데, 동명의 다른 프로세스가 살아있다면 죽이고 시작함
-            //if (!GlobalInfo.MultiProgram)
+            try
             {
-                if (IsProgramRunning())
+                Logger.Info($"★★★ Anomaly Detection PLC Communicator Version: [{ProgramVersion}] ★★★");
+
+                // 멀티프로그램 허용하지 않았는데, 동명의 다른 프로세스가 살아있다면 죽이고 시작함
+                //if (!GlobalInfo.MultiProgram)
                 {
-                    KillProgram(true);
+                    if (IsProgramRunning())
+                    {
+                        KillProgram(true);
+                    }
                 }
-            }
 
-            // Initialization Global Variable
-            InitialzeGloblaVariables();
+                // Initialization Global Variable
+                InitialzeGloblaVariables();
 
-            byte plcType = Convert.ToByte(ConfigurationManager.AppSettings["PlcType"] ?? "1");
-            if (plcType == 1)
-                plc = new MelsecInterface();
-            else if(plcType == 2)
-                plc = new ModbusInterface();
-            else if (plcType == 3)
-                plc = new AdvantechDAQInterface();
-            //else if (plcType == 4) // Siemens
-            //    plc = new AdvantechDAQInterface();
-            else if (plcType == 5)
-                plc = new LSElectricInterface();
-            else if (plcType == 6)
-                plc = new ADLinkDIOInterface(); // LGD에 3으로 배포되었으나 4로 변경 --> 6으로 변경
-            else if (plcType == 7)
-                plc = new FastechEziIoInterface();
-            else
-                plc = new MelsecInterface();
+                byte plcType = Convert.ToByte(ConfigurationManager.AppSettings["PlcType"] ?? "1");
+                if (plcType == 1)
+                    plc = new MelsecInterface();
+                else if (plcType == 2)
+                    plc = new ModbusInterface();
+                else if (plcType == 3)
+                    plc = new AdvantechDAQInterface();
+                //else if (plcType == 4) // Siemens
+                //    plc = new AdvantechDAQInterface();
+                else if (plcType == 5)
+                    plc = new LSElectricInterface();
+                else if (plcType == 6)
+                    plc = new ADLinkDIOInterface(); // LGD에 3으로 배포되었으나 4로 변경 --> 6으로 변경
+                else if (plcType == 7)
+                    plc = new FastechEziIoInterface();
+                else
+                    plc = new MelsecInterface();
 
-            StartInterfaceCommand = new RelayCommand(StartInterfaceCommandExe, param => this.CanExecute);
-            StopInterfaceCommand = new RelayCommand(StopInterfaceCommandExe, param => this.CanExecute);
-            UsbTesterButtonCommand = new RelayCommand(UsbTesterButtonCommandExe, param => this.CanExecute);
-            ManualTriggerButtonCommand = new RelayCommand(ManualTriggerButtonCommandExe, param => this.CanExecute);
+                StartInterfaceCommand = new RelayCommand(StartInterfaceCommandExe, param => this.CanExecute);
+                StopInterfaceCommand = new RelayCommand(StopInterfaceCommandExe, param => this.CanExecute);
+                UsbTesterButtonCommand = new RelayCommand(UsbTesterButtonCommandExe, param => this.CanExecute);
+                ManualTriggerButtonCommand = new RelayCommand(ManualTriggerButtonCommandExe, param => this.CanExecute);
 
-            UiWebStatusColor = new ObservableCollection<string>();
+                UiWebStatusColor = new ObservableCollection<string>();
 
-            PlcStatusColor = "gray";
-            for (int i=0; i<6; i++)
-                UiWebStatusColor.Add("gray");
-            StartPressedColor = "gray";
-            StopPressedColor = "gray";
-            InfoMessage = $"Configuration Setting Success: {plc.IsConfigurationSuccess}";
+                PlcStatusColor = "gray";
+                for (int i = 0; i < 6; i++)
+                    UiWebStatusColor.Add("gray");
+                StartPressedColor = "gray";
+                StopPressedColor = "gray";
+                InfoMessage = $"Configuration Setting Success: {plc.IsConfigurationSuccess}";
 
-            string subTitle = ConfigurationManager.AppSettings["SubTitle"] ?? string.Empty; // SubTitle
-            MainTitle = $"Ver.{ProgramVersion} {subTitle}";                                 // SubTitle
+                string subTitle = ConfigurationManager.AppSettings["SubTitle"] ?? string.Empty; // SubTitle
+                MainTitle = $"Ver.{ProgramVersion} {subTitle}";                                 // SubTitle
 
-            PlcInterfaceTimer = new System.Timers.Timer
-            {
-                Interval = 100,
-                AutoReset = true,
-                Enabled = false
-            };
-            PlcInterfaceTimer.Elapsed += new ElapsedEventHandler(ReadPlcValue);
-
-            PlcAliveTimer = new System.Timers.Timer
-            {
-                Interval = 2000,
-                AutoReset = true,
-                Enabled = false
-            };
-
-            if (((ConfigurationManager.AppSettings["UseAlive"] ?? string.Empty).ToUpper().Equals("TRUE"))
-                && ((ConfigurationManager.AppSettings["UseUIAlive"] ?? "FALSE").ToUpper().Equals("FALSE")))
-            {
-                PlcAliveTimer.Elapsed += new ElapsedEventHandler(WriteAlive);
-                AliveDevice = ConfigurationManager.AppSettings["AliveAddress"] ?? string.Empty;
-            }
-            else
-                AliveDevice = string.Empty;
-
-            if ((ConfigurationManager.AppSettings["UsePeriodicConnectReset"] ?? "FALSE").ToUpper().Equals("TRUE"))
-            {
-                ConnectResetTimer = new System.Timers.Timer
+                PlcInterfaceTimer = new System.Timers.Timer
                 {
-                    Interval = 60000,  // 1분
+                    Interval = 100,
                     AutoReset = true,
-                    Enabled = true
+                    Enabled = false
                 };
-                ConnectResetTimer.Elapsed += new ElapsedEventHandler(ConnectResetTimerHandler);
+                PlcInterfaceTimer.Elapsed += new ElapsedEventHandler(ReadPlcValue);
+
+                PlcAliveTimer = new System.Timers.Timer
+                {
+                    Interval = 2000,
+                    AutoReset = true,
+                    Enabled = false
+                };
+
+                if (((ConfigurationManager.AppSettings["UseAlive"] ?? string.Empty).ToUpper().Equals("TRUE"))
+                    && ((ConfigurationManager.AppSettings["UseUIAlive"] ?? "FALSE").ToUpper().Equals("FALSE")))
+                {
+                    PlcAliveTimer.Elapsed += new ElapsedEventHandler(WriteAlive);
+                    AliveDevice = ConfigurationManager.AppSettings["AliveAddress"] ?? string.Empty;
+                }
+                else
+                    AliveDevice = string.Empty;
+
+                if ((ConfigurationManager.AppSettings["UsePeriodicConnectReset"] ?? "FALSE").ToUpper().Equals("TRUE"))
+                {
+                    ConnectResetTimer = new System.Timers.Timer
+                    {
+                        Interval = 60000,  // 1분
+                        AutoReset = true,
+                        Enabled = true
+                    };
+                    ConnectResetTimer.Elapsed += new ElapsedEventHandler(ConnectResetTimerHandler);
+                }
+
+                // 0.7.2 : USB 경광등 테스트
+                if (GlobalInfo.UseAuroraTowerLamp)
+                    UsbTesterButtonVisible = Visibility.Visible;
+                else
+                    UsbTesterButtonVisible = Visibility.Collapsed;
+
+                var httpServer = new HttpServer();
+                Task.Run(() => httpServer.ActivateHttpService());
+
+                if ((ConfigurationManager.AppSettings["AutoRun"] ?? string.Empty).ToUpper().Equals("TRUE"))
+                {
+                    try
+                    {
+                        Thread.Sleep(3000);
+                        InfoMessage = plc.StartInterface();
+                        SetConnectionStatus();
+                    }
+                    catch (Exception ex)
+                    {
+                        Logger.Error($"Exception on {System.Reflection.MethodBase.GetCurrentMethod().Name} >>> {ex.Message}\r\n{ex.StackTrace}");
+                    }
+                    finally { }
+                }
             }
-
-            // 0.7.2 : USB 경광등 테스트
-            if (GlobalInfo.UseAuroraTowerLamp)
-                UsbTesterButtonVisible = Visibility.Visible;
-            else
-                UsbTesterButtonVisible = Visibility.Collapsed;
-
-            var httpServer = new HttpServer();
-            Task.Run(() => httpServer.ActivateHttpService());
-
-            if ((ConfigurationManager.AppSettings["AutoRun"] ?? string.Empty).ToUpper().Equals("TRUE"))
+            catch (Exception ex)
             {
-                try
-                {
-                    Thread.Sleep(3000);
-                    InfoMessage = plc.StartInterface();
-                    SetConnectionStatus();
-                }
-                catch (Exception ex)
-                {
-                    Logger.Error($"Exception on {System.Reflection.MethodBase.GetCurrentMethod().Name} >>> {ex.Message}\r\n{ex.StackTrace}");
-                }
-                finally { }
+                Logger.Error($"Exception on {System.Reflection.MethodBase.GetCurrentMethod().Name} >>> {ex.Message}\r\n{ex.StackTrace}");
             }
+            finally { }            
         }
 
         private void InitialzeGloblaVariables()

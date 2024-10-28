@@ -309,7 +309,7 @@ namespace PLCInterface
                         SetAPLCValueOn(itemReady.DeviceAddress);
                     }
 
-                    if(PreviousRead != string.Join(" ", readValues))
+                    if (PreviousRead != string.Join(" ", readValues))
                     {
                         PreviousRead = string.Join(" ", readValues);
                         Logger.Trace(PreviousRead);

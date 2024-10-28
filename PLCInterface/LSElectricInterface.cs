@@ -9,6 +9,9 @@ using System.Linq;
 using Newtonsoft.Json;
 using System.Threading.Tasks;
 using System.Threading;
+using System.Reflection;
+using System.Runtime.InteropServices.ComTypes;
+using System.Windows.Automation.Peers;
 
 namespace PLCInterface
 {
@@ -47,13 +50,19 @@ namespace PLCInterface
                     }
                     if (modelQty > 1 && deviceModel.Length > 1)
                     {
-                        string prefix = Regex.Replace(deviceModel, @"[^a-zA-Z]", "");
-                        int number = Convert.ToInt32(Regex.Replace(deviceModel, @"[^0-9]", ""));
+                        //string prefix = Regex.Replace(deviceModel, @"[^a-zA-Z]", "");  // 
+                        //int number = Convert.ToInt32(Regex.Replace(deviceModel, @"[^0-9]", ""));
+                        // 기존 정규표현식은 % 접두사가 빠져서 수정
+                        var match = Regex.Match(deviceModel, @"^(%[A-Z]+)(\d+)$");
+                        string prefix = match.Groups[1].Value;
+                        int number = int.Parse(match.Groups[2].Value);
+
 
                         for (int i = 0; i < modelQty; i++)
                         {
                             var plcVar = new PlcVariable(interfaceIndex++, $"Model{i + 1}", $"{prefix}{number++}", j + 1);
                             ReadDevices.Add(plcVar);
+                            Logger.Trace($"Read data is added. Index:{plcVar.VarIndex},VarName:{plcVar.VarName},Address{plcVar.DeviceAddress},Value:{plcVar.ReadValue},Channel:{j + 1}");
                         }
                     }
                 }
@@ -246,11 +255,11 @@ namespace PLCInterface
                     var plcVar = new PlcVariable(index, appSettingName, device, ch);
                     if (isRead)
                     {
-                        ReadDevices.Add(plcVar);
+                        ReadDevices.Add(plcVar); Logger.Trace($"Read data is added. Index:{plcVar.VarIndex},VarName:{plcVar.VarName},Address{plcVar.DeviceAddress},Value:{plcVar.ReadValue},Channel:{ch}");
                     }
                     else
                     {
-                        WriteDevices.Add(plcVar);
+                        WriteDevices.Add(plcVar); Logger.Trace($"Write data is added. Index:{plcVar.VarIndex},VarName:{plcVar.VarName},Address{plcVar.DeviceAddress},Value:{plcVar.ReadValue},Channel:{ch}");
                     }
                 }
             }
@@ -259,7 +268,7 @@ namespace PLCInterface
                 Logger.Error($"Exception on {System.Reflection.MethodBase.GetCurrentMethod().Name} >>> {ex.Message}\r\n{ex.StackTrace}");
             }
             finally { }
-        }        
+        }
 
         public int ReadFromPLCRandom(List<DeviceVariable> devices, int size, ref int[] values)
         {
@@ -274,7 +283,6 @@ namespace PLCInterface
                     {
                         values[i++] = item.Value.WordValue;
                     }
-                    //Logger.Error($"PLC Read Success - device:{devices.Replace("\n", "/")}, size:{i}, value:{values[0]}");
                 }
             }
             catch (Exception ex)
