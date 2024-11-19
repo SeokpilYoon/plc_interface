@@ -33,6 +33,12 @@ namespace PLCInterface
         public string CAMERA_NO { get; set; }
     }
 
+    public class ConsecutiveNG
+    {
+        public int channel { get; set; }
+        public bool ng { get; set; }
+    }    
+
     public class HttpServer
     {
         PlcVariable writeDevice; // = new PlcVariable();
@@ -141,6 +147,18 @@ namespace PLCInterface
                     auroraUSBTowerLampInterface.StartInterface();
                 }
 
+                string writeDeviceOn = ConfigurationManager.AppSettings["AnomalyOnAddress"] ?? string.Empty;
+                string writeDeviceOff = ConfigurationManager.AppSettings["AnomalyOffAddress"] ?? string.Empty;
+                string writeDeviceCapture = ConfigurationManager.AppSettings["CaptureCompleteAddress"] ?? string.Empty;
+                string writeDeviceBusy = ConfigurationManager.AppSettings["BusyAddress"] ?? string.Empty;
+                string writeDeviceModelChanged = ConfigurationManager.AppSettings["ESMIModelChangeCompleteAddress"] ?? string.Empty;
+                string writeDeviceError = ConfigurationManager.AppSettings["ErrorAddress"] ?? string.Empty;
+                string writeDeviceDetectReady = ConfigurationManager.AppSettings["DetectReadyAddress"] ?? string.Empty;
+                string writeDeviceAlive = ConfigurationManager.AppSettings["AliveAddress"] ?? string.Empty;
+                string writeDeviceLearnMode = ConfigurationManager.AppSettings["LearnModeAddress"] ?? string.Empty;
+
+                List<ConsecutiveNG> ConsecutiveNGList = new List<ConsecutiveNG>();
+
                 while (true)
                 {
                     HttpListenerContext context = listener.GetContext();
@@ -174,27 +192,45 @@ namespace PLCInterface
                             }
                             else
                             {
-                                string writeDeviceOn = ConfigurationManager.AppSettings["AnomalyOnAddress"] ?? string.Empty;
-                                string writeDeviceOff = ConfigurationManager.AppSettings["AnomalyOffAddress"] ?? string.Empty;
-                                string writeDeviceCapture = ConfigurationManager.AppSettings["CaptureCompleteAddress"] ?? string.Empty;
-                                string writeDeviceBusy = ConfigurationManager.AppSettings["BusyAddress"] ?? string.Empty;
-                                string writeDeviceModelChanged = ConfigurationManager.AppSettings["ESMIModelChangeCompleteAddress"] ?? string.Empty;
-                                string writeDeviceError = ConfigurationManager.AppSettings["ErrorAddress"] ?? string.Empty;
-                                string writeDeviceDetectReady = ConfigurationManager.AppSettings["DetectReadyAddress"] ?? string.Empty;
-                                string writeDeviceAlive = ConfigurationManager.AppSettings["AliveAddress"] ?? string.Empty;
-                                string writeDeviceLearnMode = ConfigurationManager.AppSettings["LearnModeAddress"] ?? string.Empty;
-
                                 writeDevice = JsonConvert.DeserializeObject<PlcVariable>(jsonText);
-                                if (writeDevice.ChannelNo > 1)
+                                if (GlobalInfo.NumChannel > 1)
                                 {
-                                    writeDeviceOn = ConfigurationManager.AppSettings[$"AnomalyOnAddress{writeDevice.ChannelNo}"] ?? string.Empty;
-                                    writeDeviceOff = ConfigurationManager.AppSettings[$"AnomalyOffAddress{writeDevice.ChannelNo}"] ?? string.Empty;
-                                }
+                                    if (writeDevice.ChannelNo > 1)
+                                    {
+                                        writeDeviceOn = ConfigurationManager.AppSettings[$"AnomalyOnAddress{writeDevice.ChannelNo}"] ?? string.Empty;
+                                        writeDeviceOff = ConfigurationManager.AppSettings[$"AnomalyOffAddress{writeDevice.ChannelNo}"] ?? string.Empty;
+                                    }
+                                    else
+                                    {
+                                        writeDeviceOn = ConfigurationManager.AppSettings["AnomalyOnAddress"] ?? string.Empty;
+                                        writeDeviceOff = ConfigurationManager.AppSettings["AnomalyOffAddress"] ?? string.Empty;
+                                    }
+                                }                                
 
                                 if (writeDevice.VarName == "AnomalyOnAddress")
                                 {
+                                    int ngCount = 0;
+
                                     if (writeDevice.ReadValue == 1)
                                     {
+                                        if (GlobalInfo.UseLGDVHCOFScenario == true)
+                                        {
+                                            ConsecutiveNG tempConsecutiveNG = new ConsecutiveNG();
+                                            tempConsecutiveNG.channel = writeDevice.ChannelNo;
+                                            tempConsecutiveNG.ng = true;
+                                            if (ConsecutiveNGList.Count >= GlobalInfo.ConsecutiveImage)
+                                                ConsecutiveNGList.RemoveAt(0);
+                                            ConsecutiveNGList.Add(tempConsecutiveNG);
+                                            
+                                            for (int i=0; i<ConsecutiveNGList.Count; i++)
+                                            {
+                                                if (ConsecutiveNGList[i].ng == true)
+                                                    ngCount++;
+                                            }
+
+                                            Logger.Debug($"LGDVH COF Cam{writeDevice.ChannelNo}, ngCount={ngCount}/{GlobalInfo.ConsecutiveImage} ");
+                                        }
+
                                         if (UseLGDTMGlassScenario == true)
                                         {
                                             results[writeDevice.ChannelNo - 1] = 2;
@@ -214,6 +250,39 @@ namespace PLCInterface
                                             {
                                                 Thread.Sleep(1000);
                                                 plc.SetAPLCValueOff(writeDeviceOn);
+                                            }
+                                        }
+                                        else if (GlobalInfo.UseLGDVHCOFScenario == true)
+                                        {
+                                            if (ngCount >= GlobalInfo.ConsecutiveAlarm)
+                                            {
+                                                Logger.Debug($"LGDVH COF NG Occured, Cam{writeDevice.ChannelNo}, ngCount={ngCount}/{GlobalInfo.ConsecutiveImage} ");
+                                                if (UseBusy == true)
+                                                    plc.SetAPLCValueOff(writeDeviceBusy);
+
+                                                plc.SetAPLCValueOn(writeDeviceOn);
+                                                plc.SetAPLCValueOff(writeDeviceOff);
+                                                plc.SetAPLCValueOff(writeDeviceCapture);
+
+                                                if (AnomalyAutoOff == true)
+                                                {
+                                                    Thread.Sleep(1000);
+                                                    plc.SetAPLCValueOff(writeDeviceOn);
+                                                }                                               
+                                            }
+                                            else
+                                            {
+                                                // COF 연속NG 아니면 OK로 처리
+                                                if (UseBusy == true)
+                                                    plc.SetAPLCValueOff(writeDeviceBusy);
+                                                plc.SetAPLCValueOff(writeDeviceOn);
+                                                plc.SetAPLCValueOn(writeDeviceOff);
+                                                plc.SetAPLCValueOff(writeDeviceCapture);
+                                                if (AnomalyAutoOff == true)
+                                                {
+                                                    Thread.Sleep(500);
+                                                    plc.SetAPLCValueOff(writeDeviceOff);
+                                                }
                                             }
                                         }
                                         else
@@ -241,6 +310,16 @@ namespace PLCInterface
                                 {
                                     if (writeDevice.ReadValue == 1)
                                     {
+                                        if (GlobalInfo.UseLGDVHCOFScenario == true)
+                                        {
+                                            ConsecutiveNG tempConsecutiveNG = new ConsecutiveNG();
+                                            tempConsecutiveNG.channel = writeDevice.ChannelNo;
+                                            tempConsecutiveNG.ng = false;
+                                            if (ConsecutiveNGList.Count >= GlobalInfo.ConsecutiveImage)
+                                                ConsecutiveNGList.RemoveAt(0);
+                                            ConsecutiveNGList.Add(tempConsecutiveNG);
+                                        }
+                                        
                                         if (UseLGDTMGlassScenario == true)
                                         {
                                             results[writeDevice.ChannelNo - 1] = 1;

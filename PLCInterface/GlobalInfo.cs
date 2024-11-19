@@ -37,6 +37,9 @@ namespace PLCInterface
 
         public static string LSElectricIP { get; set; } = "127.0.0.1";
         public static int LSElectricPort { get; set; } = 1;
+        public static bool UseLGDVHCOFScenario { get; set; } = false;
+        public static int ConsecutiveAlarm { get; set; } = 1;
+        public static int ConsecutiveImage { get; set; } = 1;
 
         public static bool InitializeGlobalInfo()
         {
@@ -77,6 +80,10 @@ namespace PLCInterface
 
                 LSElectricIP = ConfigurationManager.AppSettings["LSElectricIP"] ?? "127.0.0.1";
                 LSElectricPort = Convert.ToInt32(ConfigurationManager.AppSettings["LSElectricPort"] ?? "1");
+
+                UseLGDVHCOFScenario = (ConfigurationManager.AppSettings["UseLGDVHCOFScenario"] ?? "FALSE").ToUpper().Equals("TRUE");
+                ConsecutiveAlarm = Convert.ToInt32(ConfigurationManager.AppSettings["ConsecutiveAlarm"] ?? "1");
+                ConsecutiveImage = Convert.ToInt32(ConfigurationManager.AppSettings["ConsecutiveImage"] ?? "1");
             }
             catch (Exception ex)
             {

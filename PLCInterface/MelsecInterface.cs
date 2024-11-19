@@ -82,6 +82,7 @@ namespace PLCInterface
                 for (j = 0; j < GlobalInfo.NumChannel; j++)
                 {
                     CheckPlcAddress(interfaceIndex++, "TriggerAddress", true, j+1);
+                    CheckPlcAddress(interfaceIndex++, "AdditionalTriggerAddress", true, j + 1);
                     CheckPlcAddress(interfaceIndex++, "MbbTriggerAddress", true, j+1);
                     CheckPlcAddress(interfaceIndex++, "ReadyAddress", true, j+1);
                     CheckPlcAddress(interfaceIndex++, "Word1ModelAddress", true, j + 1);
@@ -408,12 +409,12 @@ namespace PLCInterface
                 {
                     for (int i = 0; i < RetryNumLimit; i++)
                     {
-                        Logger.Debug("Start ReadDevice Random");
+                        //Logger.Debug("Start ReadDevice Random");
                         obj = aut.ReadDeviceRandom(device, size, out values[0]);
-                        Logger.Debug("End ReadDevice Random");
+                        //Logger.Debug("End ReadDevice Random");
                         if (Convert.ToInt32(obj) == 0)
                         {
-                            Logger.Debug($"PLC Random Block Read Success - device:{device.Replace("\n", "/")}, size:{size}, value:{values[0]}");
+                            //Logger.Debug($"PLC Random Block Read Success - device:{device.Replace("\n", "/")}, size:{size}, value:{values[0]}");
                             return res;
                         }
                         else

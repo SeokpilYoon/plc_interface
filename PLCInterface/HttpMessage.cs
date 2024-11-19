@@ -28,7 +28,7 @@ namespace PLCInterface
         {
             try
             {
-                Logger.Info(messageBodyJson);
+                //Logger.Info(messageBodyJson);
 
                 int nPort = UiHttpPort1;
                 if (ch == 2)
@@ -43,7 +43,7 @@ namespace PLCInterface
                     nPort = UiHttpPort6;
 
                 string url = $"http://localhost:{nPort}/";
-                Logger.Info($"Http Send url : {url}");
+                //Logger.Info($"Http Send url : {url}");
                 var httpWebRequest = (HttpWebRequest)WebRequest.Create(url);
 
                 httpWebRequest.ContentType = "application/json";
