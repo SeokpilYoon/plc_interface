@@ -16,7 +16,7 @@ namespace PLCInterface
 {
     class MainWindowViewModel : ViewModelBase
     {
-        private static string ProgramVersion { get; set; } = "0.8.3"; // LGDVH COF 시나리오 추가
+        private static string ProgramVersion { get; set; } = "0.8.4"; // Honeywell barcode reader 추가
 
         [DllImport("kernel32")]
         public static extern Int32 GetCurrentProcessId();
@@ -26,6 +26,9 @@ namespace PLCInterface
         private System.Timers.Timer PlcInterfaceTimer = null;
         private System.Timers.Timer PlcAliveTimer = null;
         private System.Timers.Timer ConnectResetTimer = null;
+        private System.Timers.Timer ReadBarcodeTimer = null;
+
+        HoneywellBarcodeInterface Barcode_Interface;
 
         private string plcStatusColor = string.Empty;
         public string PlcStatusColor
@@ -202,6 +205,7 @@ namespace PLCInterface
             }
         }
 
+
         public MainWindowViewModel()
         {
             try
@@ -278,6 +282,20 @@ namespace PLCInterface
                 }
                 else
                     AliveDevice = string.Empty;
+
+                // HoneywellBarcodeReader 추가
+                ReadBarcodeTimer = new System.Timers.Timer
+                {
+                    Interval = 200,
+                    AutoReset = true,
+                    Enabled = false
+                };
+                if ((ConfigurationManager.AppSettings["UseHoneywellBarcodeReader"] ?? "FALSE").ToUpper().Equals("TRUE"))
+                {
+                    Logger.Info($"Use Honeywell Barcode Reader mode");
+                    Barcode_Interface = new HoneywellBarcodeInterface();
+                    ReadBarcodeTimer.Elapsed += new ElapsedEventHandler(ReadBarcode);
+                }
 
                 if ((ConfigurationManager.AppSettings["UsePeriodicConnectReset"] ?? "FALSE").ToUpper().Equals("TRUE"))
                 {
@@ -368,6 +386,7 @@ namespace PLCInterface
                 
                 PlcInterfaceTimer.Enabled = false;
                 PlcAliveTimer.Enabled = false;
+                ReadBarcodeTimer.Enabled = false;
                 WriteAliveOff();
 
                 StartPressedColor = "gray";
@@ -431,6 +450,10 @@ namespace PLCInterface
         {
             StartPressedColor = "greenyellow";
             StopPressedColor = "gray";
+
+            // enable Honeywell Barcode Reader timer
+            ReadBarcodeTimer.Enabled = true;
+            Logger.Info($"ReadBarcodeTimer is enabled.");
 
             if (plc.IsAlive)
             {
@@ -598,6 +621,7 @@ namespace PLCInterface
                     }
                     PlcInterfaceTimer.Enabled = false;
                     PlcAliveTimer.Enabled = false;
+                    ReadBarcodeTimer.Enabled = false;
 
                     Thread.Sleep(100);
 
@@ -683,6 +707,23 @@ namespace PLCInterface
                 //Utility.SaveCurrentStatus(ApplicationStatus.OnDetect);
                 Logger.Info($"♥ Killing me softly with his song ♥");
                 thisProcess.Kill();
+            }
+        }
+
+        private void ReadBarcode(object source, ElapsedEventArgs e)
+        {
+            try
+            {
+                ReadBarcodeTimer.Enabled = false;
+                Barcode_Interface.ReadBarcode();
+            }
+            catch (Exception ex)
+            {
+                Logger.Error($"Exception on {System.Reflection.MethodBase.GetCurrentMethod().Name} >>> {ex.Message}\r\n{ex.StackTrace}");
+            }
+            finally 
+            {
+                ReadBarcodeTimer.Enabled = true;
             }
         }
     }    

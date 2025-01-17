@@ -41,6 +41,11 @@ namespace PLCInterface
         public static int ConsecutiveAlarm { get; set; } = 1;
         public static int ConsecutiveImage { get; set; } = 1;
 
+        // Honeywell BarcodeReader
+        public static bool UseHoneywellBarcodeReader { get; set; } = false;
+        public static string HoneywellBarcodePort { get; set; } = "COM1";
+        public static string HoneywellBarcodeString { get; set; } = string.Empty;
+
         public static bool InitializeGlobalInfo()
         {
             bool isSuccess = true;
@@ -84,6 +89,9 @@ namespace PLCInterface
                 UseLGDVHCOFScenario = (ConfigurationManager.AppSettings["UseLGDVHCOFScenario"] ?? "FALSE").ToUpper().Equals("TRUE");
                 ConsecutiveAlarm = Convert.ToInt32(ConfigurationManager.AppSettings["ConsecutiveAlarm"] ?? "1");
                 ConsecutiveImage = Convert.ToInt32(ConfigurationManager.AppSettings["ConsecutiveImage"] ?? "1");
+
+                UseHoneywellBarcodeReader = (ConfigurationManager.AppSettings["UseHoneywellBarcodeReader"] ?? "FALSE").ToUpper().Equals("TRUE");
+                HoneywellBarcodePort = ConfigurationManager.AppSettings["HoneywellBarcodePort"] ?? "COM1";
             }
             catch (Exception ex)
             {

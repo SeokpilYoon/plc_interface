@@ -155,6 +155,7 @@
     <Compile Include="CommonInterface.cs" />
     <Compile Include="FastechEziIoInterface.cs" />
     <Compile Include="GlobalInfo.cs" />
+    <Compile Include="HoneywellBarcodeInterface.cs" />
     <Compile Include="LIB_EziMOTIONPlusE.cs" />
     <Compile Include="LSElectricInterface.cs" />
     <Compile Include="ModbusInterface.cs" />
