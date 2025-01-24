@@ -16,7 +16,7 @@ namespace PLCInterface
 {
     class MainWindowViewModel : ViewModelBase
     {
-        private static string ProgramVersion { get; set; } = "0.8.4"; // Honeywell barcode reader 추가
+        private static string ProgramVersion { get; set; } = "0.8.5"; // Barcode 값과 Model 정보 Mapping 기능 추가
 
         [DllImport("kernel32")]
         public static extern Int32 GetCurrentProcessId();

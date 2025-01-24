@@ -8,6 +8,9 @@ using System.Threading.Tasks;
 using System.Text.RegularExpressions;
 using Newtonsoft.Json;
 using System.Windows;
+using System.Data;
+using static System.Net.Mime.MediaTypeNames;
+using System.Diagnostics;
 
 namespace PLCInterface
 {
@@ -47,6 +50,8 @@ namespace PLCInterface
 
         private static bool ModelChanging { get; set; } = false;
 
+        private static string prevBarcodeString = string.Empty;
+
         public MelsecInterface()
         {
             try
@@ -57,6 +62,7 @@ namespace PLCInterface
                 ReadDevices = new List<PlcVariable>();
 
                 int j;
+                
                 for (j = 0; j < GlobalInfo.NumChannel; j++)
                 {
                     int modelQty = Convert.ToInt32(ConfigurationManager.AppSettings["ModelQty"] ?? "1");
@@ -282,6 +288,18 @@ namespace PLCInterface
                     {
                         item.ReadValue = readValues[i++];
                     }
+
+                    // 0.8.5 : Barcode 값과 Model 정보 Mapping 기능 추가
+                    if (GlobalInfo.UseBarcodeModelMapping)
+                    {
+                        int modelNumber = ApplyBarcodeModelMapping(); // 현재 바코드 정보 Mapping
+
+                        if (modelNumber != 0)
+                        {
+                            SetReadValueForModel(modelNumber, ReadDevices); // 모델 데이터 변경
+                        }
+                    }
+
                     string json = JsonConvert.SerializeObject(ReadDevices);
                     //Task.Run(() => HttpMessage.SendHttpMessage(json));
                     var messageTasks = new List<Task>();
@@ -325,7 +343,46 @@ namespace PLCInterface
             }
             finally { }
         }
-        
+
+        static int ApplyBarcodeModelMapping()
+        {
+            int modelNumber = 0;
+
+            foreach (string modelString in GlobalInfo.BarcodeModelDatas)
+            {
+                modelNumber++;
+                if (modelString == GlobalInfo.HoneywellBarcodeString)
+                {
+                    if (modelString != prevBarcodeString && modelString != string.Empty)
+                        Logger.Debug($"The set barcode model value is included in the value read by the barcode. BarcodeModel{modelNumber} : {modelString} / read value : {GlobalInfo.HoneywellBarcodeString}");
+                    prevBarcodeString = modelString;
+                    return modelNumber;
+                }
+            }
+
+            //Logger.Debug($"The read barcode value ​​do not match. value : {GlobalInfo.HoneywellBarcodeString}");
+            return 0;
+        }
+
+        public void SetReadValueForModel(int modelNumber, List<PlcVariable> ReadDevices)
+        {
+            string modelName = $"Model{modelNumber}";
+
+            foreach (PlcVariable item in ReadDevices)
+            {
+                if (item.ChannelNo >= 1 && item.ChannelNo <= 4)
+                {
+                    if (item.VarName == modelName)
+                    {
+                        item.ReadValue = 1;
+                    }
+                }
+            }
+
+            // TEST
+            Logger.Debug($"Test : {ReadDevices}");
+        }
+
 
         private void CheckPlcAddress(int index, string appSettingName, bool isRead = true, int ch = 1)
         {

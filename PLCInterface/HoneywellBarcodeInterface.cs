@@ -2,6 +2,7 @@
 using System.Threading;
 using System.IO.Ports;
 using System.Text;
+using System.Security.RightsManagement;
 
 namespace PLCInterface
 {
@@ -42,14 +43,10 @@ namespace PLCInterface
 
             try
             {
-                //Logger.Debug($"Serial Port read start.");
-                //serialPort.Write(new byte[] { 0x16, 0x54, 0x0d }, 0, 3);    // Trigger On
-
                 while (true)
                 {
                     try
                     {
-                        //int.TryParse(serialPort.ReadChar(), out asciiValue)
                         asciiValue = serialPort.ReadChar();
                         //Logger.Debug($"Serial Port Read : {asciiValue}");
 
@@ -62,7 +59,7 @@ namespace PLCInterface
                         }
                         else
                         {
-                            Logger.Error("Invalid value {rx} read from barcode reader. (0-127)");
+                            Logger.Error($"Invalid value {rx} read from barcode reader. (0-127)");
                         }
                     }
                     catch (System.TimeoutException) // Timeout 시 정상 break
@@ -76,7 +73,6 @@ namespace PLCInterface
                     }
                     Thread.Sleep(1);
                 }
-                //serialPort.Write(new byte[] { 0x16, 0x55, 0x0d }, 0, 3);    // Trigger Off
             }
             catch (Exception ex)
             {
@@ -88,11 +84,12 @@ namespace PLCInterface
 
             if (rst != string.Empty)
             {
-                GlobalInfo.HoneywellBarcodeString = rx.ToString();
-                Logger.Debug($"Barcode read result: {GlobalInfo.HoneywellBarcodeString}");
+                GlobalInfo.HoneywellBarcodeString = rst;
+                Logger.Debug($"Barcode is read. value : {GlobalInfo.HoneywellBarcodeString}");
             }
-            return GlobalInfo.HoneywellBarcodeString;
+            return rst;
         }
+
 
         static void Read()
         {

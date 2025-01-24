@@ -46,6 +46,14 @@ namespace PLCInterface
         public static string HoneywellBarcodePort { get; set; } = "COM1";
         public static string HoneywellBarcodeString { get; set; } = string.Empty;
 
+        // 바코드 string별 모델 매핑 기능 
+        public static bool UseBarcodeModelMapping { get; set; } = false;
+        public static int BarcodeModelCount { get; set; } = 1;
+
+        public static List<string> BarcodeModelDatas = new List<string>();
+        //public static string BarcodeModel1 { get; set; } = string.Empty; // UseBarcodeModelMapping = true 시 생성된 만큼 읽어옴
+        //public static string BarcodeModel2 { get; set; } = string.Empty;
+
         public static bool InitializeGlobalInfo()
         {
             bool isSuccess = true;
@@ -55,7 +63,7 @@ namespace PLCInterface
                 EnableChannels = new bool[NumChannel];
                 for (int i = 0; i < NumChannel; i++)
                 {
-                    EnableChannels[i] = (ConfigurationManager.AppSettings[$"EnableChannel{i+1}"] ?? "FALSE").ToUpper().Equals("TRUE");
+                    EnableChannels[i] = (ConfigurationManager.AppSettings[$"EnableChannel{i + 1}"] ?? "FALSE").ToUpper().Equals("TRUE");
                     if (EnableChannels[i] == true)
                         NumEnabledChannel++;
                 }
@@ -92,6 +100,20 @@ namespace PLCInterface
 
                 UseHoneywellBarcodeReader = (ConfigurationManager.AppSettings["UseHoneywellBarcodeReader"] ?? "FALSE").ToUpper().Equals("TRUE");
                 HoneywellBarcodePort = ConfigurationManager.AppSettings["HoneywellBarcodePort"] ?? "COM1";
+
+                // 0.8.5 : Barcode 값과 Model 정보 Mapping 기능 추가
+                UseBarcodeModelMapping = (ConfigurationManager.AppSettings["UseBarcodeModelMapping"] ?? "FALSE").ToUpper().Equals("TRUE");
+                BarcodeModelCount = Convert.ToInt32(ConfigurationManager.AppSettings["BarcodeModelCount"] ?? "1");
+
+                if (UseBarcodeModelMapping)
+                {
+                    for (int i = 0; i < BarcodeModelCount; i++)
+                    {
+                        // 문자열 값을 읽어와 리스트에 추가
+                        string _tmp = ConfigurationManager.AppSettings[$"BarcodeModel{i + 1}"] ?? string.Empty;
+                        BarcodeModelDatas.Add(_tmp);
+                    }
+                }
             }
             catch (Exception ex)
             {
