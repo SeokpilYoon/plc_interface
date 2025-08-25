@@ -50,12 +50,12 @@ namespace PLCInterface
                     }
                     if (modelQty > 1 && deviceModel.Length > 1)
                     {
-                        //string prefix = Regex.Replace(deviceModel, @"[^a-zA-Z]", "");  // 
-                        //int number = Convert.ToInt32(Regex.Replace(deviceModel, @"[^0-9]", ""));
-                        // 기존 정규표현식은 % 접두사가 빠져서 수정
-                        var match = Regex.Match(deviceModel, @"^(%[A-Z]+)(\d+)$");
-                        string prefix = match.Groups[1].Value;
-                        int number = int.Parse(match.Groups[2].Value);
+                        string prefix = Regex.Replace(deviceModel, @"[^a-zA-Z]", "");  // 
+                        int number = Convert.ToInt32(Regex.Replace(deviceModel, @"[^0-9]", ""));
+                        //// 기존 정규표현식은 % 접두사가 빠져서 수정
+                        //var match = Regex.Match(deviceModel, @"^(%[A-Z]+)(\d+)$");
+                        //string prefix = match.Groups[1].Value;
+                        //int number = int.Parse(match.Groups[2].Value);
 
 
                         for (int i = 0; i < modelQty; i++)
@@ -146,7 +146,19 @@ namespace PLCInterface
             string returnMessage = string.Empty;
             try
             {
-                client = new FEnetClient(new TcpChannel(GlobalInfo.LSElectricIP, GlobalInfo.LSElectricPort));
+                /* 0.8.6
+                 LS산전의 XGT Series가 XGB인 경우 Bit 변수를 Write할 때 16진수로 변환해서 전송해야함
+                 -> 아래처럼 FEnetClient 클래스의 UseHexBitIndex 속성을 true로 설정
+
+                client = new FEnetClient(new TcpChannel(GlobalInfo.LSElectricIP, GlobalInfo.LSElectricPort))
+                {
+                    UseHexBitIndex = true   //Bit 변수를 16진수로 변환하여 전송하기
+                };                 
+                 */
+                client = new FEnetClient(new TcpChannel(GlobalInfo.LSElectricIP, GlobalInfo.LSElectricPort))
+                {
+                    UseHexBitIndex = GlobalInfo.UseXgbPlcType   //Bit 변수를 16진수로 변환하여 전송하기
+                };
 
                 if (client != null)
                 {

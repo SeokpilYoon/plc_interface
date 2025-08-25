@@ -3,6 +3,7 @@ using System.Threading;
 using System.IO.Ports;
 using System.Text;
 using System.Security.RightsManagement;
+using System.Net;
 
 namespace PLCInterface
 {
@@ -68,7 +69,7 @@ namespace PLCInterface
                     }
                     catch (Exception ex)
                     {
-                        Logger.Error($"Exception on loop in ReadBarcode >>> {ex}");
+                        RetryOpenPort();
                         break;
                     }
                     Thread.Sleep(1);
@@ -90,7 +91,6 @@ namespace PLCInterface
             return rst;
         }
 
-
         static void Read()
         {
             string rx = string.Empty;
@@ -111,6 +111,30 @@ namespace PLCInterface
                 }
                 Thread.Sleep(1);
             }
+        }
+
+        private void RetryOpenPort()
+        {
+            if (serialPort != null)
+                serialPort.Close();
+
+            serialPort = new SerialPort();
+
+            serialPort.ReadTimeout = 500;
+            serialPort.WriteTimeout = 500;
+
+            serialPort.PortName = GlobalInfo.HoneywellBarcodePort;
+            serialPort.BaudRate = 115200;
+            serialPort.DataBits = 8;
+            serialPort.Parity = Parity.None;
+            serialPort.StopBits = StopBits.One;
+
+            serialPort.Open();
+        }
+
+        public void Close()
+        {
+            serialPort.Close();
         }
     }
 }

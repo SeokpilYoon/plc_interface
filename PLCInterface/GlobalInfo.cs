@@ -37,6 +37,8 @@ namespace PLCInterface
 
         public static string LSElectricIP { get; set; } = "127.0.0.1";
         public static int LSElectricPort { get; set; } = 1;
+        public static bool UseXgbPlcType { get; set; } = false;  // 0.8.6 : LS산전 PLC 타입 Config 추가
+
         public static bool UseLGDVHCOFScenario { get; set; } = false;
         public static int ConsecutiveAlarm { get; set; } = 1;
         public static int ConsecutiveImage { get; set; } = 1;
@@ -53,6 +55,7 @@ namespace PLCInterface
         public static List<string> BarcodeModelDatas = new List<string>();
         //public static string BarcodeModel1 { get; set; } = string.Empty; // UseBarcodeModelMapping = true 시 생성된 만큼 읽어옴
         //public static string BarcodeModel2 { get; set; } = string.Empty;
+        public static bool UseSinsungScenario { get; set; } = false; // 0.8.7 : 신성델타 시나리오 추가
 
         public static bool InitializeGlobalInfo()
         {
@@ -93,6 +96,7 @@ namespace PLCInterface
 
                 LSElectricIP = ConfigurationManager.AppSettings["LSElectricIP"] ?? "127.0.0.1";
                 LSElectricPort = Convert.ToInt32(ConfigurationManager.AppSettings["LSElectricPort"] ?? "1");
+                UseXgbPlcType = (ConfigurationManager.AppSettings["UseXgbPlcType"] ?? "FALSE").ToUpper().Equals("TRUE");
 
                 UseLGDVHCOFScenario = (ConfigurationManager.AppSettings["UseLGDVHCOFScenario"] ?? "FALSE").ToUpper().Equals("TRUE");
                 ConsecutiveAlarm = Convert.ToInt32(ConfigurationManager.AppSettings["ConsecutiveAlarm"] ?? "1");
@@ -114,6 +118,8 @@ namespace PLCInterface
                         BarcodeModelDatas.Add(_tmp);
                     }
                 }
+
+                UseSinsungScenario = (ConfigurationManager.AppSettings["UseSinsungScenario"] ?? "FALSE").ToUpper().Equals("TRUE"); // 0.8.7 : 신성델타 시나리오 추가
             }
             catch (Exception ex)
             {

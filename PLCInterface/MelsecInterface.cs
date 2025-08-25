@@ -11,6 +11,9 @@ using System.Windows;
 using System.Data;
 using static System.Net.Mime.MediaTypeNames;
 using System.Diagnostics;
+using System.Reflection;
+using System.Xml.Linq;
+using System.Runtime.InteropServices;
 
 namespace PLCInterface
 {
@@ -51,6 +54,10 @@ namespace PLCInterface
         private static bool ModelChanging { get; set; } = false;
 
         private static string prevBarcodeString = string.Empty;
+        private bool[] triggerDetectedPerChannel;
+
+        private List<PlcVariable> BarcodeDataDevices = new List<PlcVariable>();
+        private bool hasBarcodeProcessed = false;
 
         public MelsecInterface()
         {
@@ -125,6 +132,9 @@ namespace PLCInterface
                 GetDevicesAddressRandom();
 
                 readValues = new int[ReadDevices.Count];
+
+                triggerDetectedPerChannel = new bool[GlobalInfo.NumChannel]; // 트리거 배열 초기화 추가
+                Logger.Info($"Trigger Channel init complete"); // TEST
 
                 IsConfigurationSuccess = true;
             }
@@ -284,23 +294,67 @@ namespace PLCInterface
                 {
                     // 비동기로 보낸다
                     int i = 0;
-                    foreach(PlcVariable item in ReadDevices)
+                    foreach (PlcVariable item in ReadDevices)
                     {
                         item.ReadValue = readValues[i++];
                     }
 
-                    // 0.8.5 : Barcode 값과 Model 정보 Mapping 기능 추가
+                    // 0.8.7 : 트리거 신호만 On/Off 상태 저장 및 로그 추가
+                    for (int k = 0; k < GlobalInfo.NumChannel; k++)
+                    {
+                        int ch = k + 1;
+
+                        PlcVariable itemTrigger = null;
+                        if (ch == 1)
+                            itemTrigger = ReadDevices.Find(x => x.VarName == "TriggerAddress");
+                        else
+                            itemTrigger = ReadDevices.Find(x => x.VarName == $"TriggerAddress{ch}");
+
+                        if (itemTrigger != null)
+                        {
+                            // 채널별 트리거 상태 관리
+                            bool currentTriggerState = itemTrigger.ReadValue == 1;
+                            bool previousTriggerState = triggerDetectedPerChannel[k];
+
+                            if (currentTriggerState && !previousTriggerState)
+                            {
+                                triggerDetectedPerChannel[k] = true;
+                                Logger.Debug($"Received Channel {ch} 'TRIGGER' Signal.");
+                            }
+                            else if (!currentTriggerState && previousTriggerState)
+                            {
+                                triggerDetectedPerChannel[k] = false;
+                                Logger.Debug($"Received Channel {ch} 'TRIGGER_R' Signal.");
+                            }
+                        }
+                    }
+                    // 0.8.7 : Trigger On 시점에서 바코드 에러 체크 후 NG 신호 추가 및 바코드 정보 api 추가 전달
                     if (GlobalInfo.UseBarcodeModelMapping)
                     {
-                        int modelNumber = ApplyBarcodeModelMapping(); // 현재 바코드 정보 Mapping
+                        var itemTriggerCh1 = ReadDevices.Find(x => x.VarName == "TriggerAddress");
 
-                        if (modelNumber != 0)
+                        if (itemTriggerCh1 != null)
                         {
-                            SetReadValueForModel(modelNumber, ReadDevices); // 모델 데이터 변경
+                            bool currentTriggerState = itemTriggerCh1.ReadValue == 1;
+
+                            // Trigger On 시점
+                            if (triggerDetectedPerChannel[0] && !hasBarcodeProcessed)
+                            {
+                                Logger.Debug("Trigger Rising Edge detected - Processing barcode");
+                                ProcessBarcodeOnTrigger();
+                                hasBarcodeProcessed = true;
+                            }
+                            // 트리거가 OFF로 변경되었을 때만 플래그 리셋
+                            else if (!triggerDetectedPerChannel[0] && hasBarcodeProcessed)
+                            {
+                                hasBarcodeProcessed = false;
+                                Logger.Debug("Trigger Falling Edge detected - Reset processing flag");
+                            }
                         }
                     }
 
-                    string json = JsonConvert.SerializeObject(ReadDevices);
+                    string json = CreateJsonMessage();
+
                     //Task.Run(() => HttpMessage.SendHttpMessage(json));
                     var messageTasks = new List<Task>();
                     for (int j = 0; j < GlobalInfo.NumChannel; j++)
@@ -344,17 +398,266 @@ namespace PLCInterface
             finally { }
         }
 
-        static int ApplyBarcodeModelMapping()
+        private string CreateJsonMessage()
+        {
+            try
+            {
+                if (GlobalInfo.UseBarcodeModelMapping && BarcodeDataDevices.Any())
+                {
+                    var combinedData = ReadDevices.Concat(BarcodeDataDevices).ToList();
+                    return JsonConvert.SerializeObject(combinedData);
+                }
+                else
+                {
+                    return JsonConvert.SerializeObject(ReadDevices);
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.Error($"JSON serialization error: {ex.Message}");
+                return JsonConvert.SerializeObject(ReadDevices); // 기본 데이터라도 전송
+            }
+        }
+
+        private void ProcessBarcodeOnTrigger()
+        {
+            Logger.Debug("Processing barcode on trigger activation");
+
+            string _barcodeString = GlobalInfo.HoneywellBarcodeString;
+
+            if (GlobalInfo.UseSinsungScenario)
+            {
+                _barcodeString = WaitForBarcodeUpdate(_barcodeString);
+            }
+
+            // 바코드 처리 로직
+            bool hasBarcodeMissed = CheckBarcodeMissed(_barcodeString);
+            if (hasBarcodeMissed) _barcodeString = "Missed";
+
+            //string _cleanBarcode = _barcodeString.Split(':')[0];
+            string _cleanBarcode = CleanBarcodeString(_barcodeString);
+            bool hasBarcodeError = IsBarcodeError(_cleanBarcode);
+
+            bool hasModelMappedError = false;
+            int modelNumber = ApplyBarcodeModelMapping(_cleanBarcode);
+            if (modelNumber != 0)
+            {
+                SetReadValueForModel(modelNumber, ReadDevices);
+            }
+            else
+            {
+                hasModelMappedError = true;
+                Logger.Debug("Barcode Model Mapping error detected.");
+            }
+
+            // 별도 리스트에 바코드 데이터 저장 (ReadDevices에 추가하지 않음)
+            UpdateBarcodeDataSeparately(_cleanBarcode, hasBarcodeMissed, hasBarcodeError, hasModelMappedError);
+
+            if (hasBarcodeMissed || hasBarcodeError || hasModelMappedError)
+            {
+                BarcodeAlarmBitOn();
+            }
+
+            prevBarcodeString = _barcodeString;
+        }
+
+        private string CleanBarcodeString(string rawBarcode)
+        {
+            if (string.IsNullOrEmpty(rawBarcode))
+                return string.Empty;
+
+            // 0. 예시 케이스 추출 AJQ72913050KSD58E0170:00:100%:98:25/25:0.73:6.905:1:0:555/789:1
+            string cleaned = rawBarcode.Split(':')[0];
+
+            // 1. 앞뒤 공백 및 제어문자 제거
+            cleaned = cleaned.Trim();
+
+            // 2. 일반적인 제어문자 제거
+            cleaned = cleaned.Trim('\0', '\r', '\n', '\t', '\b', '\f', '\v');
+
+            // 3. 인쇄 불가능한 문자 제거
+            cleaned = new string(cleaned.Where(c => !char.IsControl(c) || char.IsWhiteSpace(c)).ToArray());
+
+            // 4. 연속된 공백을 하나로 변환 후 제거
+            cleaned = Regex.Replace(cleaned, @"\s+", "").Trim();
+            return cleaned;
+        }
+
+        private void UpdateBarcodeDataSeparately(string cleanBarcode, bool hasBarcodeMissed, bool hasBarcodeError, bool hasModelMappedError)
+        {
+            // 기존 바코드 데이터 초기화
+            BarcodeDataDevices.Clear();
+
+            for (int j = 0; j < GlobalInfo.NumChannel; j++)
+            {
+                int channelNo = j + 1;
+
+                BarcodeDataDevices.Add(new PlcVariable(0, "SerialNumber", cleanBarcode, channelNo));
+                BarcodeDataDevices.Add(new PlcVariable(0, "hasBarcodeMissed", string.Empty, channelNo) { ReadValue = hasBarcodeMissed ? 1 : 0 });
+                BarcodeDataDevices.Add(new PlcVariable(0, "hasBarcodeError", string.Empty, channelNo) { ReadValue = hasBarcodeError ? 1 : 0 });
+                BarcodeDataDevices.Add(new PlcVariable(0, "hasModelMappedError", string.Empty, channelNo) { ReadValue = hasModelMappedError ? 1 : 0 });
+            }
+
+            Logger.Debug($"Barcode data updated separately.");
+        }
+
+        private string WaitForBarcodeUpdate(string initialBarcode)
+        {
+            const int MAX_WAIT_ATTEMPTS = 20; // 최대 대기 횟수
+            int waitAttempts = 0;
+            string currentBarcode = initialBarcode;
+
+            Logger.Debug($"Waiting for barcode update (2s). Initial: {initialBarcode}");
+
+            while (waitAttempts < MAX_WAIT_ATTEMPTS)  // 2초(100ms * 20)동안 barcode 추가 업데이트 진행
+            {
+                currentBarcode = GlobalInfo.HoneywellBarcodeString;
+                Thread.Sleep(100);
+                waitAttempts++;
+            }
+
+            Logger.Debug($"Barcode wait completed. Final: {currentBarcode}");
+            return currentBarcode;
+        }
+
+        private bool CheckBarcodeMissed(string currentBarcode)
+        {
+            if (currentBarcode == prevBarcodeString && !string.IsNullOrEmpty(currentBarcode))
+            {
+                Logger.Debug($"[NG] Barcode missed detection. Same as previous: [{currentBarcode}]");
+                return true;
+            }
+            return false;
+        }
+
+        private bool IsBarcodeError(string barcodeString)
+        {
+           /*
+               [정상]
+               AJQ 7487 3872 KSD 58 J 0084
+               AJQ74873869KSD58F0044
+               AJQ74873867KSD58J0008
+               AJQ72913048KSD58J0001
+               AJQ72913048KSD58J0103
+               AJQ74873869KSD58M0009
+               AJQ74 87386 9KSD5 8M001 0
+
+               [에러]
+               J7836K
+               ERROR
+               ERROR::0%:0:0
+
+               [에러지만 정상으로 변환 가능한 것]
+               AJQ72913050KSD58E0170:00:100%:98:25/25:0.73:6.905:1:0:555/789:1
+            */
+
+            try
+            {
+                // 기본 검증
+                if (string.IsNullOrEmpty(barcodeString))
+                {
+                    Logger.Debug($"[NG] Barcode error detected: Empty or null barcode string");
+                    return true;
+                }
+
+                // 명시적 에러 문자열 체크
+                if (barcodeString.Contains("ERROR") ||
+                    barcodeString.Contains("error") ||
+                    barcodeString.Contains("FAIL"))
+                {
+                    Logger.Debug($"[NG] Barcode error detected: Error message found in barcode string.");
+                    return true;
+                }
+
+                // 영숫자만 포함하는지 검증
+                foreach (char c in barcodeString)
+                {
+                    if (!char.IsLetterOrDigit(c))
+                    {
+                        Logger.Debug($"[NG] Barcode error detected: Invalid character '{c}' found.");
+                        return true;
+                    }
+                }
+
+                if (GlobalInfo.UseSinsungScenario)
+                {
+                    // 길이 검증 (정상 바코드는 21자)
+                    if (barcodeString.Length != 21)
+                    {
+                        Logger.Debug($"[NG] Barcode error detected: Invalid length [{barcodeString.Length}], expected 21 characters.");
+                        return true;
+                    }
+
+                    // 5. 정상 패턴 검증 (AJQ로 시작하는 패턴)
+                    if (!barcodeString.StartsWith("AJQ"))
+                    {
+                        Logger.Debug($"[NG] Barcode error detected: Invalid prefix, expected 'AJQ'.");
+                        return true;
+                    }
+                }
+
+                return false;
+            }
+            catch (Exception ex)
+            {
+                Logger.Error($"Exception on {System.Reflection.MethodBase.GetCurrentMethod().Name} >>> {ex.Message}\r\n{ex.StackTrace}");
+                return false;
+            }
+            finally { }
+        }
+
+        private void BarcodeAlarmBitOn()
+        {
+            try
+            {
+                bool isSetAlarm = false;
+
+                // ch1
+                var itemReady = ReadDevices.Find(x => x.VarName == "AnomalyOnAddress");
+                if (itemReady != null && itemReady.ReadValue == 0 && itemReady.DeviceAddress != string.Empty)
+                {
+                    SetAPLCValueOn(itemReady.DeviceAddress);
+                    isSetAlarm = true;
+                }
+
+                // ch2~4
+                if (GlobalInfo.NumChannel > 1)
+                {
+                    for (int j = 1; j < GlobalInfo.NumChannel; j++)
+                    {
+                        itemReady = ReadDevices.Find(x => x.VarName == $"AnomalyOnAddress{j + 1}");
+                        if (itemReady != null && itemReady.ReadValue == 0 && itemReady.DeviceAddress != string.Empty)
+                        {
+                            SetAPLCValueOn(itemReady.DeviceAddress);
+                            isSetAlarm = true;
+                        }
+                    }
+                }
+
+                if (isSetAlarm)
+                    Logger.Debug($"PLC write Success.");
+                else
+                    Logger.Debug($"Alarm occurs but not written to PLC (address is empty)");
+            }
+            catch (Exception ex)
+            {
+                Logger.Error($"Exception on {System.Reflection.MethodBase.GetCurrentMethod().Name} >>> {ex.Message}\r\n{ex.StackTrace}");
+            }
+            finally { }
+        }
+
+        static int ApplyBarcodeModelMapping(string barcodeString)
         {
             int modelNumber = 0;
 
             foreach (string modelString in GlobalInfo.BarcodeModelDatas)
             {
                 modelNumber++;
-                if (modelString == GlobalInfo.HoneywellBarcodeString)
+
+                if (barcodeString.Contains(modelString))
                 {
                     if (modelString != prevBarcodeString && modelString != string.Empty)
-                        Logger.Debug($"The set barcode model value is included in the value read by the barcode. BarcodeModel{modelNumber} : {modelString} / read value : {GlobalInfo.HoneywellBarcodeString}");
+                        Logger.Debug($"The model is changed. [prev model] : {prevBarcodeString} -> [now model] {modelString} (Model{modelNumber})");
                     prevBarcodeString = modelString;
                     return modelNumber;
                 }
@@ -370,17 +673,16 @@ namespace PLCInterface
 
             foreach (PlcVariable item in ReadDevices)
             {
-                if (item.ChannelNo >= 1 && item.ChannelNo <= 4)
+                if (item.ChannelNo >= 1 && item.ChannelNo <= 4 && item.VarName.Contains("Model"))
                 {
                     if (item.VarName == modelName)
                     {
                         item.ReadValue = 1;
                     }
+                    else
+                        item.ReadValue = 0;
                 }
             }
-
-            // TEST
-            Logger.Debug($"Test : {ReadDevices}");
         }
 
 
@@ -638,7 +940,7 @@ namespace PLCInterface
         {
             if (device == string.Empty)
             {
-                Logger.Error("Write Device is empty");
+                //Logger.Error("Write Device is empty");
                 return -1;
             }
 

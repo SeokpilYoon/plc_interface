@@ -11,12 +11,13 @@ using System.Runtime.InteropServices;
 using System.Text;
 using System.Windows.Controls;
 using System.Windows;
+using System.IO.Ports;
 
 namespace PLCInterface
 {
     class MainWindowViewModel : ViewModelBase
     {
-        private static string ProgramVersion { get; set; } = "0.8.5"; // Barcode 값과 Model 정보 Mapping 기능 추가
+        private static string ProgramVersion { get; set; } = "0.8.7"; // 바코드 S/N 전달 추가(신성델타)
 
         [DllImport("kernel32")]
         public static extern Int32 GetCurrentProcessId();
@@ -205,7 +206,6 @@ namespace PLCInterface
             }
         }
 
-
         public MainWindowViewModel()
         {
             try
@@ -386,7 +386,8 @@ namespace PLCInterface
                 
                 PlcInterfaceTimer.Enabled = false;
                 PlcAliveTimer.Enabled = false;
-                ReadBarcodeTimer.Enabled = false;
+                if ((ConfigurationManager.AppSettings["UseHoneywellBarcodeReader"] ?? "FALSE").ToUpper().Equals("TRUE"))
+                    ReadBarcodeTimer.Enabled = false;
                 WriteAliveOff();
 
                 StartPressedColor = "gray";
@@ -451,9 +452,12 @@ namespace PLCInterface
             StartPressedColor = "greenyellow";
             StopPressedColor = "gray";
 
-            // enable Honeywell Barcode Reader timer
-            ReadBarcodeTimer.Enabled = true;
-            Logger.Info($"ReadBarcodeTimer is enabled.");
+            if ((ConfigurationManager.AppSettings["UseHoneywellBarcodeReader"] ?? "FALSE").ToUpper().Equals("TRUE"))
+            {
+                // enable Honeywell Barcode Reader timer
+                ReadBarcodeTimer.Enabled = true;
+                Logger.Info($"ReadBarcodeTimer is enabled.");
+            }
 
             if (plc.IsAlive)
             {
@@ -621,7 +625,8 @@ namespace PLCInterface
                     }
                     PlcInterfaceTimer.Enabled = false;
                     PlcAliveTimer.Enabled = false;
-                    ReadBarcodeTimer.Enabled = false;
+                    if ((ConfigurationManager.AppSettings["UseHoneywellBarcodeReader"] ?? "FALSE").ToUpper().Equals("TRUE"))
+                        ReadBarcodeTimer.Enabled = false;
 
                     Thread.Sleep(100);
 
