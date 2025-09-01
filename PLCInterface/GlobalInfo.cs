@@ -56,6 +56,7 @@ namespace PLCInterface
         //public static string BarcodeModel1 { get; set; } = string.Empty; // UseBarcodeModelMapping = true 시 생성된 만큼 읽어옴
         //public static string BarcodeModel2 { get; set; } = string.Empty;
         public static bool UseSinsungScenario { get; set; } = false; // 0.8.7 : 신성델타 시나리오 추가
+        public static int BarcodeWaitAttempts { get; set; } = 20; // 0.8.7 : 신성델타 시나리오 추가
 
         public static bool InitializeGlobalInfo()
         {
@@ -120,6 +121,7 @@ namespace PLCInterface
                 }
 
                 UseSinsungScenario = (ConfigurationManager.AppSettings["UseSinsungScenario"] ?? "FALSE").ToUpper().Equals("TRUE"); // 0.8.7 : 신성델타 시나리오 추가
+                BarcodeWaitAttempts = Convert.ToInt32(ConfigurationManager.AppSettings["BarcodeWaitAttempts"] ?? "20");
             }
             catch (Exception ex)
             {

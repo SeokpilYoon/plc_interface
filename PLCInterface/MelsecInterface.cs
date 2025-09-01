@@ -419,6 +419,10 @@ namespace PLCInterface
             }
         }
 
+
+        const string MISSED_TEXT = "Missed";
+        const int NORMAL_BARCODE_LENGTH = 21; // 신성델타 바코드 길이
+
         private void ProcessBarcodeOnTrigger()
         {
             Logger.Debug("Processing barcode on trigger activation");
@@ -429,42 +433,38 @@ namespace PLCInterface
             {
                 _barcodeString = WaitForBarcodeUpdate(_barcodeString);
             }
-
+            
             // 바코드 처리 로직
-            bool hasBarcodeMissed = CheckBarcodeMissed(_barcodeString);
-            if (hasBarcodeMissed) _barcodeString = "Missed";
+            bool hasModelMappedError = false; // model mapped error 미사용 (UI에서 진행)
+            bool hasBarcodeMissed = false;
 
-            //string _cleanBarcode = _barcodeString.Split(':')[0];
             string _cleanBarcode = CleanBarcodeString(_barcodeString);
             bool hasBarcodeError = IsBarcodeError(_cleanBarcode);
-
-            bool hasModelMappedError = false;
-            int modelNumber = ApplyBarcodeModelMapping(_cleanBarcode);
-            if (modelNumber != 0)
+            
+            if (!hasBarcodeError)
             {
-                SetReadValueForModel(modelNumber, ReadDevices);
-            }
-            else
-            {
-                hasModelMappedError = true;
-                Logger.Debug("Barcode Model Mapping error detected.");
+                hasBarcodeMissed = CheckBarcodeMissed(_cleanBarcode);
+                if (hasBarcodeMissed) _cleanBarcode = MISSED_TEXT;
             }
 
             // 별도 리스트에 바코드 데이터 저장 (ReadDevices에 추가하지 않음)
             UpdateBarcodeDataSeparately(_cleanBarcode, hasBarcodeMissed, hasBarcodeError, hasModelMappedError);
 
-            if (hasBarcodeMissed || hasBarcodeError || hasModelMappedError)
+            if (hasBarcodeMissed || hasBarcodeError)
             {
-                BarcodeAlarmBitOn();
+                if (GlobalInfo.UseSinsungScenario) // 신성 델타 시나리오에서는 에러 어드레스 별도 ALARM
+                    BarcodeAlarmBitOn_Sinsung();
+                else
+                    BarcodeAlarmBitOn(); // Error 시 기존 NG Address로 전달
             }
 
-            prevBarcodeString = _barcodeString;
+            prevBarcodeString = _cleanBarcode;
         }
 
         private string CleanBarcodeString(string rawBarcode)
         {
             if (string.IsNullOrEmpty(rawBarcode))
-                return string.Empty;
+                return MISSED_TEXT;
 
             // 0. 예시 케이스 추출 AJQ72913050KSD58E0170:00:100%:98:25/25:0.73:6.905:1:0:555/789:1
             string cleaned = rawBarcode.Split(':')[0];
@@ -480,6 +480,12 @@ namespace PLCInterface
 
             // 4. 연속된 공백을 하나로 변환 후 제거
             cleaned = Regex.Replace(cleaned, @"\s+", "").Trim();
+
+            if (GlobalInfo.UseSinsungScenario)
+            {
+                cleaned = cleaned.Length >= 21 ? cleaned.Substring(0, 21) : cleaned;
+            }
+
             return cleaned;
         }
 
@@ -503,11 +509,11 @@ namespace PLCInterface
 
         private string WaitForBarcodeUpdate(string initialBarcode)
         {
-            const int MAX_WAIT_ATTEMPTS = 20; // 최대 대기 횟수
+            int MAX_WAIT_ATTEMPTS = GlobalInfo.BarcodeWaitAttempts; // 최대 대기 횟수
             int waitAttempts = 0;
             string currentBarcode = initialBarcode;
 
-            Logger.Debug($"Waiting for barcode update (2s). Initial: {initialBarcode}");
+            Logger.Debug($"Waiting for barcode update ({MAX_WAIT_ATTEMPTS * 0.1}s). Initial: {initialBarcode}");
 
             while (waitAttempts < MAX_WAIT_ATTEMPTS)  // 2초(100ms * 20)동안 barcode 추가 업데이트 진행
             {
@@ -524,7 +530,7 @@ namespace PLCInterface
         {
             if (currentBarcode == prevBarcodeString && !string.IsNullOrEmpty(currentBarcode))
             {
-                Logger.Debug($"[NG] Barcode missed detection. Same as previous: [{currentBarcode}]");
+                Logger.Debug($"[NG] Barcode missed detection. Same as previous: {currentBarcode}");
                 return true;
             }
             return false;
@@ -556,7 +562,7 @@ namespace PLCInterface
                 // 기본 검증
                 if (string.IsNullOrEmpty(barcodeString))
                 {
-                    Logger.Debug($"[NG] Barcode error detected: Empty or null barcode string");
+                    Logger.Debug($"[NG] Barcode error detected: Empty or null barcode string. : {barcodeString}");
                     return true;
                 }
 
@@ -565,7 +571,7 @@ namespace PLCInterface
                     barcodeString.Contains("error") ||
                     barcodeString.Contains("FAIL"))
                 {
-                    Logger.Debug($"[NG] Barcode error detected: Error message found in barcode string.");
+                    Logger.Debug($"[NG] Barcode error detected: Error message found in barcode string. : {barcodeString}");
                     return true;
                 }
 
@@ -574,7 +580,7 @@ namespace PLCInterface
                 {
                     if (!char.IsLetterOrDigit(c))
                     {
-                        Logger.Debug($"[NG] Barcode error detected: Invalid character '{c}' found.");
+                        Logger.Debug($"[NG] Barcode error detected: Invalid character '{c}' found. : {barcodeString}");
                         return true;
                     }
                 }
@@ -582,16 +588,16 @@ namespace PLCInterface
                 if (GlobalInfo.UseSinsungScenario)
                 {
                     // 길이 검증 (정상 바코드는 21자)
-                    if (barcodeString.Length != 21)
+                    if (barcodeString.Length != NORMAL_BARCODE_LENGTH)
                     {
-                        Logger.Debug($"[NG] Barcode error detected: Invalid length [{barcodeString.Length}], expected 21 characters.");
+                        Logger.Debug($"[NG] Barcode error detected: Invalid length [{barcodeString.Length}], expected 21 characters. : {barcodeString}");
                         return true;
                     }
 
                     // 5. 정상 패턴 검증 (AJQ로 시작하는 패턴)
                     if (!barcodeString.StartsWith("AJQ"))
                     {
-                        Logger.Debug($"[NG] Barcode error detected: Invalid prefix, expected 'AJQ'.");
+                        Logger.Debug($"[NG] Barcode error detected: Invalid prefix, expected 'AJQ'. : {barcodeString}");
                         return true;
                     }
                 }
@@ -605,6 +611,7 @@ namespace PLCInterface
             }
             finally { }
         }
+
 
         private void BarcodeAlarmBitOn()
         {
@@ -638,6 +645,39 @@ namespace PLCInterface
                     Logger.Debug($"PLC write Success.");
                 else
                     Logger.Debug($"Alarm occurs but not written to PLC (address is empty)");
+            }
+            catch (Exception ex)
+            {
+                Logger.Error($"Exception on {System.Reflection.MethodBase.GetCurrentMethod().Name} >>> {ex.Message}\r\n{ex.StackTrace}");
+            }
+            finally { }
+        }
+
+        private void BarcodeAlarmBitOn_Sinsung()
+        {
+            try
+            {
+                string BarcodeAlarmAddress1 = ConfigurationManager.AppSettings["BarcodeAlarmAddress1"] ?? string.Empty;
+                string BarcodeAlarmAddress2 = ConfigurationManager.AppSettings["BarcodeAlarmAddress2"] ?? string.Empty;
+                string BarcodeAlarmAddress3 = ConfigurationManager.AppSettings["BarcodeAlarmAddress3"] ?? string.Empty;
+                string BarcodeAlarmAddress4 = ConfigurationManager.AppSettings["BarcodeAlarmAddress4"] ?? string.Empty;
+
+                if (BarcodeAlarmAddress1 != string.Empty)
+                {
+                    SetAPLCValueOn(BarcodeAlarmAddress1);
+                }
+                if (BarcodeAlarmAddress2 != string.Empty)
+                {
+                    SetAPLCValueOn(BarcodeAlarmAddress2);
+                }
+                if (BarcodeAlarmAddress3 != string.Empty)
+                {
+                    SetAPLCValueOn(BarcodeAlarmAddress3);
+                }
+                if (BarcodeAlarmAddress4 != string.Empty)
+                {
+                    SetAPLCValueOn(BarcodeAlarmAddress4);
+                }
             }
             catch (Exception ex)
             {
