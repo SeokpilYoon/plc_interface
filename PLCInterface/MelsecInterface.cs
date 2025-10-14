@@ -328,23 +328,25 @@ namespace PLCInterface
                             }
                         }
                     }
+
                     // 0.8.7 : Trigger On 시점에서 바코드 에러 체크 후 NG 신호 추가 및 바코드 정보 api 추가 전달
                     if (GlobalInfo.UseBarcodeModelMapping)
                     {
+                        // TODO : Barcode COM별 CH 분기 (현재는 1PC 1Barcode 구조임)
                         var itemTriggerCh1 = ReadDevices.Find(x => x.VarName == "TriggerAddress");
 
                         if (itemTriggerCh1 != null)
                         {
                             bool currentTriggerState = itemTriggerCh1.ReadValue == 1;
 
-                            // Trigger On 시점
+                            // CH1 Trigger On 시점
                             if (triggerDetectedPerChannel[0] && !hasBarcodeProcessed)
                             {
                                 Logger.Debug("Trigger Rising Edge detected - Processing barcode");
                                 ProcessBarcodeOnTrigger();
                                 hasBarcodeProcessed = true;
                             }
-                            // 트리거가 OFF로 변경되었을 때만 플래그 리셋
+                            // CH1 트리거가 OFF로 변경되었을 때만 플래그 리셋
                             else if (!triggerDetectedPerChannel[0] && hasBarcodeProcessed)
                             {
                                 hasBarcodeProcessed = false;
@@ -353,27 +355,29 @@ namespace PLCInterface
                         }
                     }
 
-                    string json = CreateJsonMessage();
+                    // 데이터 변경 시에만 HTTP 메시지 전송 (Task.Wait() 제거)
+                    string currentRead = string.Join(" ", readValues);
+                    if (PreviousRead != currentRead)
+                    {
+                        string json = CreateJsonMessage();
 
-                    //Task.Run(() => HttpMessage.SendHttpMessage(json));
-                    var messageTasks = new List<Task>();
-                    for (int j = 0; j < GlobalInfo.NumChannel; j++)
-                    {
-                        messageTasks.Add(Task.Run(() =>
+                        // Task.Wait() 제거 - Fire-and-Forget 패턴으로 변경
+                        for (int j = 0; j < GlobalInfo.NumChannel; j++)
                         {
-                            HttpMessage.SendHttpMessage(json, j + 1);
-                        }));
-                        Thread.Sleep(10);   // 이 부분 없으면 꼬임(TODO: 쓰레드 간 변수 독립성 보장 필요)
-                    }
-                    try
-                    {
-                        Task t = Task.WhenAll(messageTasks);
-                        t.Wait();
-                    }
-                    catch (AggregateException) { }
-                    catch (Exception ex)
-                    {
-                        Logger.Error($"Exception on {System.Reflection.MethodBase.GetCurrentMethod().Name} >>> {ex.Message}\r\n{ex.StackTrace}");
+                            int channelIndex = j; // 클로저 문제 해결을 위한 지역 변수
+                            Task.Run(() =>
+                            {
+                                try
+                                {
+                                    HttpMessage.SendHttpMessage(json, channelIndex + 1);
+                                }
+                                catch (Exception ex)
+                                {
+                                    Logger.Error($"HTTP Send Error on Channel {channelIndex + 1}: {ex.Message}");
+                                }
+                            });
+                            Thread.Sleep(10);   // 이 부분 없으면 꼬임(TODO: 쓰레드 간 변수 독립성 보장 필요)
+                        }
                     }
 
                     var itemReady = ReadDevices.Find(x => x.VarName == "ReadyAddress");
@@ -382,9 +386,10 @@ namespace PLCInterface
                         SetAPLCValueOn(itemReady.DeviceAddress);
                     }
 
-                    if (PreviousRead != string.Join(" ", readValues))
+                    // PreviousRead 업데이트 (중복 제거)
+                    if (PreviousRead != currentRead)
                     {
-                        PreviousRead = string.Join(" ", readValues);
+                        PreviousRead = currentRead;
                         Logger.Trace(PreviousRead);
                     }
                     return $"PLC Read Success [{string.Join(" ", readValues)}]";
@@ -438,17 +443,21 @@ namespace PLCInterface
             bool hasModelMappedError = false; // model mapped error 미사용 (UI에서 진행)
             bool hasBarcodeMissed = false;
 
+            // 누락 처리 (string.empty or 이전과 동일값)
+            hasBarcodeMissed = CheckBarcodeMissed(_barcodeString);
+            //if (hasBarcodeMissed) _cleanBarcode = MISSED_TEXT;
+
+            // 정제
             string _cleanBarcode = CleanBarcodeString(_barcodeString);
+
+            // 에러 체크
             bool hasBarcodeError = IsBarcodeError(_cleanBarcode);
             
-            if (!hasBarcodeError)
-            {
-                hasBarcodeMissed = CheckBarcodeMissed(_cleanBarcode);
-                if (hasBarcodeMissed) _cleanBarcode = MISSED_TEXT;
-            }
-
             // 별도 리스트에 바코드 데이터 저장 (ReadDevices에 추가하지 않음)
-            UpdateBarcodeDataSeparately(_cleanBarcode, hasBarcodeMissed, hasBarcodeError, hasModelMappedError);
+            if (hasBarcodeMissed)
+                UpdateBarcodeDataSeparately(MISSED_TEXT, hasBarcodeMissed, hasBarcodeError, hasModelMappedError);
+            else
+                UpdateBarcodeDataSeparately(_cleanBarcode, hasBarcodeMissed, hasBarcodeError, hasModelMappedError);
 
             if (hasBarcodeMissed || hasBarcodeError)
             {
@@ -459,12 +468,14 @@ namespace PLCInterface
             }
 
             prevBarcodeString = _cleanBarcode;
+            GlobalInfo.HoneywellBarcodeString = string.Empty;
+            Logger.Debug("Reset barcode data complete.");
         }
 
         private string CleanBarcodeString(string rawBarcode)
         {
             if (string.IsNullOrEmpty(rawBarcode))
-                return MISSED_TEXT;
+                return string.Empty;
 
             // 0. 예시 케이스 추출 AJQ72913050KSD58E0170:00:100%:98:25/25:0.73:6.905:1:0:555/789:1
             string cleaned = rawBarcode.Split(':')[0];
@@ -528,7 +539,7 @@ namespace PLCInterface
 
         private bool CheckBarcodeMissed(string currentBarcode)
         {
-            if (currentBarcode == prevBarcodeString && !string.IsNullOrEmpty(currentBarcode))
+            if (currentBarcode == prevBarcodeString || string.IsNullOrEmpty(currentBarcode))
             {
                 Logger.Debug($"[NG] Barcode missed detection. Same as previous: {currentBarcode}");
                 return true;
