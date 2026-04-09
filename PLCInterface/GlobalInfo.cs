@@ -58,6 +58,11 @@ namespace PLCInterface
         public static bool UseSinsungScenario { get; set; } = false; // 0.8.7 : 신성델타 시나리오 추가
         public static int BarcodeWaitAttempts { get; set; } = 20; // 0.8.7 : 신성델타 시나리오 추가
 
+        public static bool SkipPLCInterface { get; set; } = false;
+        public static int UiHttpPort1 { get; set; } = 6161;
+        public static List<bool> IsSuccessToSend { get; set; } = new List<bool>();
+        public static bool IsConnectedToMES { get; set; } = false;
+
         public static bool InitializeGlobalInfo()
         {
             bool isSuccess = true;
@@ -122,6 +127,11 @@ namespace PLCInterface
 
                 UseSinsungScenario = (ConfigurationManager.AppSettings["UseSinsungScenario"] ?? "FALSE").ToUpper().Equals("TRUE"); // 0.8.7 : 신성델타 시나리오 추가
                 BarcodeWaitAttempts = Convert.ToInt32(ConfigurationManager.AppSettings["BarcodeWaitAttempts"] ?? "20");
+                UiHttpPort1 = Convert.ToInt32(ConfigurationManager.AppSettings["HttpSendPort"] ?? "6161");
+                SkipPLCInterface = (ConfigurationManager.AppSettings["SkipPLCInterface"] ?? "FALSE").ToUpper().Equals("TRUE");
+
+                for (int i = 0; i < NumChannel; i++)
+                    IsSuccessToSend.Add(false);
             }
             catch (Exception ex)
             {

@@ -17,12 +17,6 @@ namespace PLCInterface
         public static int UiHttpPort4 { get; set; } = Convert.ToInt32(ConfigurationManager.AppSettings["HttpSendPort4"] ?? "6164");
         public static int UiHttpPort5 { get; set; } = Convert.ToInt32(ConfigurationManager.AppSettings["HttpSendPort5"] ?? "6165");
         public static int UiHttpPort6 { get; set; } = Convert.ToInt32(ConfigurationManager.AppSettings["HttpSendPort6"] ?? "6166");
-        public static bool IsSuccessToSend1 { get; set; } = false;
-        public static bool IsSuccessToSend2 { get; set; } = false;
-        public static bool IsSuccessToSend3 { get; set; } = false;
-        public static bool IsSuccessToSend4 { get; set; } = false;
-        public static bool IsSuccessToSend5 { get; set; } = false;
-        public static bool IsSuccessToSend6 { get; set; } = false;
 
         /// <summary>
         /// UI 애플리케이션으로 HTTP POST 메시지를 전송하는 메서드
@@ -134,6 +128,44 @@ namespace PLCInterface
             }
         }
 
+        public static string PostRequest(string url, string json, int timeoutMilliseconds = 0)
+        {
+            string receivedHeader = string.Empty;
+            try
+            {
+                var httpWebRequest = (HttpWebRequest)WebRequest.Create(url);
+                httpWebRequest.ContentType = "application/json; charset=utf-8";
+                httpWebRequest.Method = "POST";
+                if (timeoutMilliseconds > 0)
+                    httpWebRequest.Timeout = timeoutMilliseconds; // 타임아웃 설정
+
+                byte[] byteArray = Encoding.UTF8.GetBytes(json);
+                httpWebRequest.ContentLength = byteArray.Length;
+
+                Stream datastream = httpWebRequest.GetRequestStream();
+                datastream.Write(byteArray, 0, byteArray.Length);
+                datastream.Close();
+                
+                var httpResponse = (HttpWebResponse)httpWebRequest.GetResponse();
+                using (var streamReader = new StreamReader(httpResponse.GetResponseStream()))
+                {
+                    var result = streamReader.ReadToEnd();
+                    receivedHeader = result;
+                }
+            }
+            catch (WebException ex) when (ex.Status == WebExceptionStatus.Timeout)
+            {
+                Logger.Error($"Request timed out: {System.Reflection.MethodBase.GetCurrentMethod().Name}");
+                receivedHeader = "timeout_error";
+            }
+            catch (Exception ex)
+            {
+                Logger.Error($"Exception on {System.Reflection.MethodBase.GetCurrentMethod().Name} >>> {ex.Message}\r\n{ex.StackTrace}");
+                receivedHeader = $"error: {ex.Message}";
+            }
+            return receivedHeader;
+        }
+
         /// <summary>
         /// 채널별 HTTP 전송 성공/실패 플래그를 설정하는 메서드
         /// 개선사항: 중복 코드 제거를 위해 별도 메서드로 분리
@@ -143,18 +175,8 @@ namespace PLCInterface
         private static void SetSuccessFlag(int ch, bool success)
         {
             // 채널별 성공 플래그 설정 (기존 레거시 방식 유지)
-            if (ch == 1)
-                IsSuccessToSend1 = success;
-            else if (ch == 2)
-                IsSuccessToSend2 = success;
-            else if (ch == 3)
-                IsSuccessToSend3 = success;
-            else if (ch == 4)
-                IsSuccessToSend4 = success;
-            else if (ch == 5)
-                IsSuccessToSend5 = success;
-            else if (ch == 6)
-                IsSuccessToSend6 = success;
+            if (ch > 0 && ch <= GlobalInfo.NumChannel) 
+                GlobalInfo.IsSuccessToSend[ch-1] = success;
         }
     }
 }

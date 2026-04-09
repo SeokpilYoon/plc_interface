@@ -10,12 +10,18 @@
         <local:MainWindowViewModel/>
     </Window.DataContext>
     <Grid Background="#FF333333">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="0*"/>
+            <ColumnDefinition Width="0*"/>
+            <ColumnDefinition Width="33*"/>
+            <ColumnDefinition Width="37*"/>
+        </Grid.ColumnDefinitions>
         <Grid.RowDefinitions>
             <RowDefinition Height="115"/>
-            <RowDefinition Height="62"/>
-            <RowDefinition Height="43"/>
+            <RowDefinition Height="90"/>
+            <RowDefinition Height="20"/>
         </Grid.RowDefinitions>
-        <Grid Grid.Row="0">
+        <Grid Grid.Row="0" Grid.ColumnSpan="4">
             <TextBlock HorizontalAlignment="Left" VerticalAlignment="Top" Margin="10,2,0,0" Text="{Binding MainTitle}" Foreground="white" />
             <TextBlock HorizontalAlignment="Left" VerticalAlignment="Top" Margin="10,24,0,0" Text="*Check admin mode if something is wrong." Foreground="white" />
             <GroupBox x:Name="groupBox" Header="Command" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="15,39,0,0"  Width="220" Height="60" Foreground="white" />
@@ -24,18 +30,36 @@
             <Button x:Name="button2" Content="" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="240,64,0,0" Width="20" Command="{Binding UsbTesterButtonCommand}" Background="DarkSeaGreen" Visibility="{Binding UsbTesterButtonVisible}"/>
             <Button x:Name="button3" Content="" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="270,64,0,0" Width="20" Command="{Binding ManualTriggerButtonCommand}" Background="DarkSeaGreen"/>
         </Grid>
-        <Grid Grid.Row="1">
-            <TextBlock HorizontalAlignment="Left" VerticalAlignment="Top" Margin="10,8,0,0" Width ="200" Text="PLC Connection Status" Foreground="white" />
+        <Grid Grid.Row="1" Grid.ColumnSpan="4">
+            <TextBlock HorizontalAlignment="Left" VerticalAlignment="Top" Margin="10,8,0,0" Width ="200" Text="MES Connection Status" Foreground="white" />
             <Rectangle HorizontalAlignment="Left" VerticalAlignment="Top" Margin="140,8,0,0" Width="20" Height="20" Stroke="Black" Fill="{Binding PlcStatusColor}" />
-            <TextBlock HorizontalAlignment="Left" VerticalAlignment="Top" Margin="10,35,0,0" Width ="200" Text="UI Connection Status" Foreground="white" />
-            <Rectangle HorizontalAlignment="Left" VerticalAlignment="Top" Margin="140,35,0,0" Width="20" Height="20" Stroke="Black" Fill="{Binding UiWebStatusColor[0]}" />
-            <Rectangle HorizontalAlignment="Left" VerticalAlignment="Top" Margin="160,35,0,0" Width="20" Height="20" Stroke="Black" Fill="{Binding UiWebStatusColor[1]}" />
-            <Rectangle HorizontalAlignment="Left" VerticalAlignment="Top" Margin="180,35,0,0" Width="20" Height="20" Stroke="Black" Fill="{Binding UiWebStatusColor[2]}" />
-            <Rectangle HorizontalAlignment="Left" VerticalAlignment="Top" Margin="200,35,0,0" Width="20" Height="20" Stroke="Black" Fill="{Binding UiWebStatusColor[3]}" />
-            <Rectangle HorizontalAlignment="Left" VerticalAlignment="Top" Margin="220,35,0,0" Width="20" Height="20" Stroke="Black" Fill="{Binding UiWebStatusColor[4]}" />
-            <Rectangle HorizontalAlignment="Left" VerticalAlignment="Top" Margin="240,35,0,0" Width="20" Height="20" Stroke="Black" Fill="{Binding UiWebStatusColor[5]}" />
+            <TextBlock HorizontalAlignment="Left" VerticalAlignment="Top" Margin="10,30,0,0" Width ="200" Text="UI Connection Status" Foreground="white" />
+            <Rectangle HorizontalAlignment="Left" VerticalAlignment="Top" Margin="10,50,0,0" Width="20" Height="20" Stroke="Black" Fill="{Binding UiWebStatusColor[0]}" />
+            <Rectangle HorizontalAlignment="Left" VerticalAlignment="Top" Margin="30,50,0,0" Width="20" Height="20" Stroke="Black" Fill="{Binding UiWebStatusColor[1]}" />
+            <Rectangle HorizontalAlignment="Left" VerticalAlignment="Top" Margin="50,50,0,0" Width="20" Height="20" Stroke="Black" Fill="{Binding UiWebStatusColor[2]}" />
+            <Rectangle HorizontalAlignment="Left" VerticalAlignment="Top" Margin="70,50,0,0" Width="20" Height="20" Stroke="Black" Fill="{Binding UiWebStatusColor[3]}" />
+            <Rectangle HorizontalAlignment="Left" VerticalAlignment="Top" Margin="90,50,0,0" Width="20" Height="20" Stroke="Black" Fill="{Binding UiWebStatusColor[4]}" />
+            <Rectangle HorizontalAlignment="Left" VerticalAlignment="Top" Margin="110,50,0,0" Width="20" Height="20" Stroke="Black" Fill="{Binding UiWebStatusColor[5]}" />
+            <Rectangle HorizontalAlignment="Left" VerticalAlignment="Top" Margin="130,50,0,0" Width="20" Height="20" Stroke="Black" Fill="{Binding UiWebStatusColor[6]}" />
+            <Rectangle HorizontalAlignment="Left" VerticalAlignment="Top" Margin="150,50,0,0" Width="20" Height="20" Stroke="Black" Fill="{Binding UiWebStatusColor[7]}" />
+            <Rectangle HorizontalAlignment="Left" VerticalAlignment="Top" Margin="170,50,0,0" Width="20" Height="20" Stroke="Black" Fill="{Binding UiWebStatusColor[8]}" />
+            <Rectangle HorizontalAlignment="Left" VerticalAlignment="Top" Margin="190,50,0,0" Width="20" Height="20" Stroke="Black" Fill="{Binding UiWebStatusColor[9]}" />
+            <Rectangle HorizontalAlignment="Left" VerticalAlignment="Top" Margin="210,50,0,0" Width="20" Height="20" Stroke="Black" Fill="{Binding UiWebStatusColor[10]}" />
+            <Rectangle HorizontalAlignment="Left" VerticalAlignment="Top" Margin="230,50,0,0" Width="20" Height="20" Stroke="Black" Fill="{Binding UiWebStatusColor[11]}" />
+            <Rectangle HorizontalAlignment="Left" VerticalAlignment="Top" Margin="10,70,0,0" Width="20" Height="20" Stroke="Black" Fill="{Binding UiWebStatusColor[12]}" />
+            <Rectangle HorizontalAlignment="Left" VerticalAlignment="Top" Margin="30,70,0,0" Width="20" Height="20" Stroke="Black" Fill="{Binding UiWebStatusColor[13]}" />
+            <Rectangle HorizontalAlignment="Left" VerticalAlignment="Top" Margin="50,70,0,0" Width="20" Height="20" Stroke="Black" Fill="{Binding UiWebStatusColor[14]}" />
+            <Rectangle HorizontalAlignment="Left" VerticalAlignment="Top" Margin="70,70,0,0" Width="20" Height="20" Stroke="Black" Fill="{Binding UiWebStatusColor[15]}" />
+            <Rectangle HorizontalAlignment="Left" VerticalAlignment="Top" Margin="90,70,0,0" Width="20" Height="20" Stroke="Black" Fill="{Binding UiWebStatusColor[16]}" />
+            <Rectangle HorizontalAlignment="Left" VerticalAlignment="Top" Margin="110,70,0,0" Width="20" Height="20" Stroke="Black" Fill="{Binding UiWebStatusColor[17]}" />
+            <Rectangle HorizontalAlignment="Left" VerticalAlignment="Top" Margin="130,70,0,0" Width="20" Height="20" Stroke="Black" Fill="{Binding UiWebStatusColor[18]}" />
+            <Rectangle HorizontalAlignment="Left" VerticalAlignment="Top" Margin="150,70,0,0" Width="20" Height="20" Stroke="Black" Fill="{Binding UiWebStatusColor[19]}" />
+            <Rectangle HorizontalAlignment="Left" VerticalAlignment="Top" Margin="170,70,0,0" Width="20" Height="20" Stroke="Black" Fill="{Binding UiWebStatusColor[20]}" />
+            <Rectangle HorizontalAlignment="Left" VerticalAlignment="Top" Margin="190,70,0,0" Width="20" Height="20" Stroke="Black" Fill="{Binding UiWebStatusColor[21]}" />
+            <Rectangle HorizontalAlignment="Left" VerticalAlignment="Top" Margin="210,70,0,0" Width="20" Height="20" Stroke="Black" Fill="{Binding UiWebStatusColor[22]}" />
+            <Rectangle HorizontalAlignment="Left" VerticalAlignment="Top" Margin="230,70,0,0" Width="20" Height="20" Stroke="Black" Fill="{Binding UiWebStatusColor[23]}" />
         </Grid>
-        <Grid Grid.Row="2">
+        <Grid Grid.Row="2" Grid.ColumnSpan="4">
             <Grid.RowDefinitions>
                 <RowDefinition Height="0*"/>
                 <RowDefinition/>

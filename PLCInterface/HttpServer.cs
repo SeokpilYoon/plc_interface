@@ -37,7 +37,37 @@ namespace PLCInterface
     {
         public int channel { get; set; }
         public bool ng { get; set; }
-    }    
+    }
+
+    public class RootPostResult
+    {
+        public bool Result { get; set; }
+        public string Reason { get; set; }
+    }
+
+    // samco_mes 삼천산업 MES
+    public class ResDatumSamcoMes
+    {
+        public string plant_id { get; set; }
+        public string res_id { get; set; }
+        public string res_name { get; set; }
+        public string res_ud_flag { get; set; }
+        public string res_status { get; set; }
+        public string res_status_name { get; set; }
+        public string proc_order_id { get; set; }
+        public string mat_id { get; set; }
+        public string mat_name { get; set; }
+        public int ord_in_qty { get; set; }
+        public int ord_out_qty { get; set; }
+        public int ord_loss_qty { get; set; }
+    }
+
+    public class RootSamcoMes
+    {
+        public string plant_code { get; set; }
+        public DateTime send_time { get; set; }
+        public List<ResDatumSamcoMes> res_data { get; set; }
+    }
 
     public class HttpServer
     {
@@ -138,7 +168,8 @@ namespace PLCInterface
                 else
                     plc = new MelsecInterface();
 
-                plc.StartInterface();
+                if (GlobalInfo.SkipPLCInterface == false)
+                    plc.StartInterface();
 
                 AuroraUSBTowerLampInterface auroraUSBTowerLampInterface = null;
                 if (GlobalInfo.UseAuroraTowerLamp == true)
@@ -169,7 +200,7 @@ namespace PLCInterface
                                                          request.ContentEncoding))
                     {
                         jsonText = reader.ReadToEnd();
-                        Logger.Trace($"{jsonText}");
+                        //Logger.Trace($"{jsonText}");
                         try
                         {
                             if (request.Url.LocalPath == "/USBLamp")
@@ -189,6 +220,19 @@ namespace PLCInterface
                                     GlobalInfo.DongaResults.Add(dongaResult);
                                     //Utility.SendOracleDB(dongaResult.PART_NO, dongaResult.LINE_CD, dongaResult.TEST_DT, dongaResult.OK_YN, dongaResult.IMAGEPATH, dongaResult.CAMERA_NO);
                                 }
+                            }
+                            else if (request.Url.LocalPath == "/samco_mes") // 삼천산업 MES
+                            {
+                                GlobalInfo.IsConnectedToMES = true;
+                                //RootSamcoMes rootSamcoMes = JsonConvert.DeserializeObject<RootSamcoMes>(jsonText);
+                                //string json = JsonConvert.SerializeObject(rootSamcoMes);
+
+                                Task.Run(() => SendSamcoMEStoUI(jsonText));
+
+                                RootPostResult root = new RootPostResult();
+                                root.Result = true;
+                                root.Reason = "";
+                                msgTitle = JsonConvert.SerializeObject(root);
                             }
                             else
                             {
@@ -573,6 +617,30 @@ namespace PLCInterface
         //    }
 
         //    await Task.Delay(10);
-        //}        
+        //}
+
+        public void SendSamcoMEStoUI(string jsonText)
+        {
+            for (int i = 0; i < GlobalInfo.NumChannel; i++)
+            {
+                try
+                {
+                    int port = GlobalInfo.UiHttpPort1 + i;
+                    string sendUrl = $"http://localhost:{port}/samco_mes";
+
+                    string rev = HttpMessage.PostRequest(sendUrl, jsonText);
+
+                    if (rev.Contains("error"))
+                        GlobalInfo.IsSuccessToSend[i] = false;
+                    else
+                        GlobalInfo.IsSuccessToSend[i] = true;
+
+                }
+                catch (Exception ex)
+                {
+                    Logger.Error($"{ex.Message}\r\n{ex.StackTrace}");
+                }
+            }
+        }
     }
 }

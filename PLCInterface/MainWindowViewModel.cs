@@ -17,7 +17,7 @@ namespace PLCInterface
 {
     class MainWindowViewModel : ViewModelBase
     {
-        private static string ProgramVersion { get; set; } = "0.8.7"; // 바코드 S/N 전달 추가(신성델타)
+        private static string ProgramVersion { get; set; } = "0.8.8"; // 삼천산업 MES
 
         [DllImport("kernel32")]
         public static extern Int32 GetCurrentProcessId();
@@ -28,6 +28,7 @@ namespace PLCInterface
         private System.Timers.Timer PlcAliveTimer = null;
         private System.Timers.Timer ConnectResetTimer = null;
         private System.Timers.Timer ReadBarcodeTimer = null;
+        private System.Timers.Timer ConnectRefreshTimer = null;
 
         HoneywellBarcodeInterface Barcode_Interface;
 
@@ -250,7 +251,7 @@ namespace PLCInterface
                 UiWebStatusColor = new ObservableCollection<string>();
 
                 PlcStatusColor = "gray";
-                for (int i = 0; i < 6; i++)
+                for (int i = 0; i < GlobalInfo.NumChannel; i++)
                     UiWebStatusColor.Add("gray");
                 StartPressedColor = "gray";
                 StopPressedColor = "gray";
@@ -307,6 +308,13 @@ namespace PLCInterface
                     };
                     ConnectResetTimer.Elapsed += new ElapsedEventHandler(ConnectResetTimerHandler);
                 }
+                ConnectRefreshTimer = new System.Timers.Timer
+                {
+                    Interval = 2000,
+                    AutoReset = true,
+                    Enabled = true
+                };
+                ConnectRefreshTimer.Elapsed += new ElapsedEventHandler(ConnectRefreshTimerHandler);
 
                 // 0.7.2 : USB 경광등 테스트
                 if (GlobalInfo.UseAuroraTowerLamp)
@@ -356,7 +364,8 @@ namespace PLCInterface
         {
             try
             {
-                InfoMessage = plc.StartInterface();
+                if (GlobalInfo.SkipPLCInterface == false)
+                    InfoMessage = plc.StartInterface();
                 SetConnectionStatus();
             }
             catch(Exception ex)
@@ -370,25 +379,28 @@ namespace PLCInterface
         {
             try
             {
-                if (plc.IsAlive) // 0.5.5
+                if (GlobalInfo.SkipPLCInterface == false)
                 {
-                    // true가 되기까지 기다렸다가, false로 세팅
-                    int loopCount = 0;
-                    while (!PlcInterfaceTimer.Enabled)
+                    if (plc.IsAlive) // 0.5.5
                     {
-                        Logger.Info("Stop Retry");
-                        Thread.Sleep(100);
-                        if (loopCount > 5)
-                            break;
-                        loopCount++;
+                        // true가 되기까지 기다렸다가, false로 세팅
+                        int loopCount = 0;
+                        while (!PlcInterfaceTimer.Enabled)
+                        {
+                            Logger.Info("Stop Retry");
+                            Thread.Sleep(100);
+                            if (loopCount > 5)
+                                break;
+                            loopCount++;
+                        }
                     }
+
+                    PlcInterfaceTimer.Enabled = false;
+                    PlcAliveTimer.Enabled = false;
+                	if ((ConfigurationManager.AppSettings["UseHoneywellBarcodeReader"] ?? "FALSE").ToUpper().Equals("TRUE"))
+                    	ReadBarcodeTimer.Enabled = false;
+                    WriteAliveOff();
                 }
-                
-                PlcInterfaceTimer.Enabled = false;
-                PlcAliveTimer.Enabled = false;
-                if ((ConfigurationManager.AppSettings["UseHoneywellBarcodeReader"] ?? "FALSE").ToUpper().Equals("TRUE"))
-                    ReadBarcodeTimer.Enabled = false;
-                WriteAliveOff();
 
                 StartPressedColor = "gray";
                 StopPressedColor = "greenyellow";
@@ -490,45 +502,13 @@ namespace PLCInterface
                 PlcInterfaceTimer.Enabled = false;
                 InfoMessage = plc.ReadPlcValues();
 
-                if (GlobalInfo.NumChannel >= 6)
+                for (int i = 0; i < GlobalInfo.NumChannel; i++)
                 {
-                    if (HttpMessage.IsSuccessToSend6)
-                        UiWebStatusColor[5] = "greenyellow";
+                    if (GlobalInfo.IsSuccessToSend[i])
+                        UiWebStatusColor[i] = "greenyellow";
                     else
-                        UiWebStatusColor[5] = "red";
+                        UiWebStatusColor[i] = "red";
                 }
-                if (GlobalInfo.NumChannel >= 5)
-                {
-                    if (HttpMessage.IsSuccessToSend5)
-                        UiWebStatusColor[4] = "greenyellow";
-                    else
-                        UiWebStatusColor[4] = "red";
-                }
-                if (GlobalInfo.NumChannel >= 4)
-                {
-                    if (HttpMessage.IsSuccessToSend4)
-                        UiWebStatusColor[3] = "greenyellow";
-                    else
-                        UiWebStatusColor[3] = "red";
-                }
-                if (GlobalInfo.NumChannel >= 3)
-                {
-                    if (HttpMessage.IsSuccessToSend3)
-                        UiWebStatusColor[2] = "greenyellow";
-                    else
-                        UiWebStatusColor[2] = "red";
-                }
-                if (GlobalInfo.NumChannel >= 2)
-                {
-                    if (HttpMessage.IsSuccessToSend2)
-                        UiWebStatusColor[1] = "greenyellow";
-                    else
-                        UiWebStatusColor[1] = "red";
-                }
-                if (HttpMessage.IsSuccessToSend1)
-                    UiWebStatusColor[0] = "greenyellow";
-                else
-                    UiWebStatusColor[0] = "red";
                 
                 PlcInterfaceTimer.Interval = Convert.ToInt32(ConfigurationManager.AppSettings["PlcReadInterval"] ?? "100"); // 0.5.2
             }
@@ -633,6 +613,39 @@ namespace PLCInterface
                     // StartInterfaceCommandExe
                     InfoMessage = plc.StartInterface();
                     SetConnectionStatus();
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.Error($"Exception on {System.Reflection.MethodBase.GetCurrentMethod().Name} >>> {ex.Message}\r\n{ex.StackTrace}");
+            }
+        }
+
+        private void ConnectRefreshTimerHandler(object source, ElapsedEventArgs e)
+        {
+            try
+            {
+                for (int i = 0; i < GlobalInfo.NumChannel; i++)
+                {
+                    Logger.Debug($"ConnectRefreshTimerHandler {i}");
+                    if (GlobalInfo.IsSuccessToSend[i])
+                    {
+                        UiWebStatusColor[i] = "greenyellow";
+                    }
+                    else
+                    {
+                        UiWebStatusColor[i] = "red";
+                    }
+
+                    if (GlobalInfo.IsConnectedToMES)
+                    {
+                        PlcStatusColor = "greenyellow";
+                        GlobalInfo.IsConnectedToMES = false;
+                    }
+                    else
+                    {
+                        PlcStatusColor = "red";
+                    }
                 }
             }
             catch (Exception ex)
