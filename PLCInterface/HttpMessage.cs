@@ -127,7 +127,6 @@ namespace PLCInterface
                 catch { /* 해제 실패 시 무시 (이미 해제되었거나 null인 경우) */ }
             }
         }
-
         public static string PostRequest(string url, string json, int timeoutMilliseconds = 0)
         {
             string receivedHeader = string.Empty;
@@ -137,34 +136,37 @@ namespace PLCInterface
                 httpWebRequest.ContentType = "application/json; charset=utf-8";
                 httpWebRequest.Method = "POST";
                 if (timeoutMilliseconds > 0)
-                    httpWebRequest.Timeout = timeoutMilliseconds; // 타임아웃 설정
+                    httpWebRequest.Timeout = timeoutMilliseconds;
 
                 byte[] byteArray = Encoding.UTF8.GetBytes(json);
                 httpWebRequest.ContentLength = byteArray.Length;
 
-                Stream datastream = httpWebRequest.GetRequestStream();
-                datastream.Write(byteArray, 0, byteArray.Length);
-                datastream.Close();
-                
-                var httpResponse = (HttpWebResponse)httpWebRequest.GetResponse();
+                using (Stream datastream = httpWebRequest.GetRequestStream())
+                {
+                    datastream.Write(byteArray, 0, byteArray.Length);
+                }
+
+                using (var httpResponse = (HttpWebResponse)httpWebRequest.GetResponse())
                 using (var streamReader = new StreamReader(httpResponse.GetResponseStream()))
                 {
-                    var result = streamReader.ReadToEnd();
-                    receivedHeader = result;
+                    receivedHeader = streamReader.ReadToEnd();
                 }
             }
             catch (WebException ex) when (ex.Status == WebExceptionStatus.Timeout)
             {
-                Logger.Error($"Request timed out: {System.Reflection.MethodBase.GetCurrentMethod().Name}");
+                // 타임아웃 발생 시 해당 URL 포함하여 로그 기록
+                Logger.Error($"[Timeout] URL: {url} | Method: {System.Reflection.MethodBase.GetCurrentMethod().Name}");
                 receivedHeader = "timeout_error";
             }
             catch (Exception ex)
             {
-                Logger.Error($"Exception on {System.Reflection.MethodBase.GetCurrentMethod().Name} >>> {ex.Message}\r\n{ex.StackTrace}");
+                // 일반 예외 발생 시 해당 URL과 에러 메시지 함께 기록
+                Logger.Error($"[Exception] URL: {url} | Method: {System.Reflection.MethodBase.GetCurrentMethod().Name} >>> {ex.Message}\r\n{ex.StackTrace}");
                 receivedHeader = $"error: {ex.Message}";
             }
             return receivedHeader;
         }
+
 
         /// <summary>
         /// 채널별 HTTP 전송 성공/실패 플래그를 설정하는 메서드
