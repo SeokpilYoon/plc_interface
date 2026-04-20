@@ -4,6 +4,7 @@ using Oracle.ManagedDataAccess.Client;
 using System;
 using System.Collections.Generic;
 using System.Configuration;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Net;
@@ -226,6 +227,8 @@ namespace PLCInterface
                                 GlobalInfo.IsConnectedToMES = true;
                                 //RootSamcoMes rootSamcoMes = JsonConvert.DeserializeObject<RootSamcoMes>(jsonText);
                                 //string json = JsonConvert.SerializeObject(rootSamcoMes);
+
+                                Logger.Debug($"/samco_mes : {jsonText}");
 
                                 Task.Run(() => SendSamcoMEStoUI(jsonText));
 
@@ -631,7 +634,10 @@ namespace PLCInterface
                     string rev = HttpMessage.PostRequest(sendUrl, jsonText);
 
                     if (rev.Contains("error"))
+                    {
                         GlobalInfo.IsSuccessToSend[i] = false;
+                        Logger.Error($"ui respones error : url : {sendUrl}");
+                    }
                     else
                         GlobalInfo.IsSuccessToSend[i] = true;
 

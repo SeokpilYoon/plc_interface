@@ -627,7 +627,7 @@ namespace PLCInterface
             {
                 for (int i = 0; i < GlobalInfo.NumChannel; i++)
                 {
-                    Logger.Debug($"ConnectRefreshTimerHandler {i}");
+                    //Logger.Debug($"ConnectRefreshTimerHandler {i}");
                     if (GlobalInfo.IsSuccessToSend[i])
                     {
                         UiWebStatusColor[i] = "greenyellow";
