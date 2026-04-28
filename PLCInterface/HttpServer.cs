@@ -228,8 +228,6 @@ namespace PLCInterface
                                 //RootSamcoMes rootSamcoMes = JsonConvert.DeserializeObject<RootSamcoMes>(jsonText);
                                 //string json = JsonConvert.SerializeObject(rootSamcoMes);
 
-                                Logger.Debug($"/samco_mes : {jsonText}");
-
                                 Task.Run(() => SendSamcoMEStoUI(jsonText));
 
                                 RootPostResult root = new RootPostResult();
