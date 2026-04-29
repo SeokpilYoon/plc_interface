@@ -46,6 +46,20 @@ namespace PLCInterface
             }
         }
 
+        private string mesStatusColor = string.Empty;
+        public string MesStatusColor
+        {
+            get
+            {
+                return mesStatusColor;
+            }
+            set
+            {
+                mesStatusColor = value;
+                OnPropertyChanged("MesStatusColor");
+            }
+        }
+
         private ObservableCollection<string> uiWebStatusColor;
         public ObservableCollection<string> UiWebStatusColor
         {
@@ -251,6 +265,7 @@ namespace PLCInterface
                 UiWebStatusColor = new ObservableCollection<string>();
 
                 PlcStatusColor = "gray";
+                MesStatusColor = "gray";
                 for (int i = 0; i < GlobalInfo.NumChannel; i++)
                     UiWebStatusColor.Add("gray");
                 StartPressedColor = "gray";
@@ -504,7 +519,7 @@ namespace PLCInterface
 
                 for (int i = 0; i < GlobalInfo.NumChannel; i++)
                 {
-                    if (GlobalInfo.IsSuccessToSend[i])
+                    if (GlobalInfo.UiSendSuccess[i])
                         UiWebStatusColor[i] = "greenyellow";
                     else
                         UiWebStatusColor[i] = "red";
@@ -628,7 +643,7 @@ namespace PLCInterface
                 for (int i = 0; i < GlobalInfo.NumChannel; i++)
                 {
                     //Logger.Debug($"ConnectRefreshTimerHandler {i}");
-                    if (GlobalInfo.IsSuccessToSend[i])
+                    if (GlobalInfo.UiSendSuccess[i])
                     {
                         UiWebStatusColor[i] = "greenyellow";
                     }
@@ -636,16 +651,16 @@ namespace PLCInterface
                     {
                         UiWebStatusColor[i] = "red";
                     }
+                }
 
-                    if (GlobalInfo.IsConnectedToMES)
-                    {
-                        PlcStatusColor = "greenyellow";
-                        GlobalInfo.IsConnectedToMES = false;
-                    }
-                    else
-                    {
-                        PlcStatusColor = "red";
-                    }
+                if (GlobalInfo.IsConnectedToMES)
+                {
+                    MesStatusColor = "greenyellow";
+                    GlobalInfo.IsConnectedToMES = false;
+                }
+                else
+                {
+                    MesStatusColor = "red";
                 }
             }
             catch (Exception ex)

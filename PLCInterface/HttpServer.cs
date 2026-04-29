@@ -633,11 +633,11 @@ namespace PLCInterface
 
                     if (rev.Contains("error"))
                     {
-                        GlobalInfo.IsSuccessToSend[i] = false;
+                        GlobalInfo.UiSendSuccess[i] = false;
                         Logger.Error($"ui respones error : url : {sendUrl}");
                     }
                     else
-                        GlobalInfo.IsSuccessToSend[i] = true;
+                        GlobalInfo.UiSendSuccess[i] = true;
 
                 }
                 catch (Exception ex)

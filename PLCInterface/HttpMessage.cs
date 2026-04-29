@@ -178,7 +178,7 @@ namespace PLCInterface
         {
             // 채널별 성공 플래그 설정 (기존 레거시 방식 유지)
             if (ch > 0 && ch <= GlobalInfo.NumChannel) 
-                GlobalInfo.IsSuccessToSend[ch-1] = success;
+                GlobalInfo.UiSendSuccess[ch-1] = success;
         }
     }
 }

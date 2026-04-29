@@ -60,7 +60,7 @@ namespace PLCInterface
 
         public static bool SkipPLCInterface { get; set; } = false;
         public static int UiHttpPort1 { get; set; } = 6161;
-        public static List<bool> IsSuccessToSend { get; set; } = new List<bool>();
+        public static List<bool> UiSendSuccess { get; set; } = new List<bool>();
         public static bool IsConnectedToMES { get; set; } = false;
 
         public static bool InitializeGlobalInfo()
@@ -131,7 +131,7 @@ namespace PLCInterface
                 SkipPLCInterface = (ConfigurationManager.AppSettings["SkipPLCInterface"] ?? "FALSE").ToUpper().Equals("TRUE");
 
                 for (int i = 0; i < NumChannel; i++)
-                    IsSuccessToSend.Add(false);
+                    UiSendSuccess.Add(false);
             }
             catch (Exception ex)
             {
